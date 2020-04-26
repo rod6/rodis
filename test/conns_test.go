@@ -24,9 +24,9 @@ func TestEcho(t *testing.T) {
 func TestSelect(t *testing.T) {
 	tests := []rodisTest{
 		{[]interface{}{"select"}, replyType{"Error", "ERR wrong number of arguments for 'select' command"}},
-		{[]interface{}{"select", "a"}, replyType{"Error", "ERR invalid DB index"}},
-		{[]interface{}{"select", "16"}, replyType{"Error", "ERR invalid DB index"}},
-		{[]interface{}{"select", "-1"}, replyType{"Error", "ERR invalid DB index"}},
+		{[]interface{}{"select", "a"}, replyType{"Error", "ERR DB index is out of range"}},
+		{[]interface{}{"select", "16"}, replyType{"Error", "ERR DB index is out of range"}},
+		{[]interface{}{"select", "-1"}, replyType{"Error", "ERR DB index is out of range"}},
 		{[]interface{}{"select", "15"}, replyType{"SimpleString", "OK"}},
 		{[]interface{}{"select", "0"}, replyType{"SimpleString", "OK"}},
 	}

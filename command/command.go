@@ -1,4 +1,4 @@
-// Copyright (c) 2015, Rod Dong <rod.dong@gmail.com>
+// Copyright (c) 2020, Rod Dong <rod.dong@gmail.com>
 // All rights reserved.
 //
 // Use of this source code is governed by The MIT License.
@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/libgo/logx"
 	"github.com/rod6/rodis/resp"
 	"github.com/rod6/rodis/storage"
 )
@@ -46,9 +45,15 @@ var commands = map[string]*attr{
 	"flushdb": {flushdb, 1},
 
 	// keys
-	"del":    {del, 0},
-	"exists": {exists, 0},
-	"type":   {tipe, 2},
+	"del":       {del, 0},
+	"exists":    {exists, 0},
+	"expire":    {expire, 3},
+	"expireat":  {expireat, 3},
+	"pexpire":   {pexpire, 3},
+	"pexpireat": {pexpireat, 3},
+	"pttl":      {pttl, 2},
+	"ttl":       {ttl, 2},
+	"type":      {tipe, 2},
 
 	// strings
 	"append":      {appendx, 3},
@@ -106,17 +111,14 @@ func Handle(v resp.Array, ex *Extras) error {
 	ex.Buffer.Truncate(0) // Truncate all data in the buffer
 
 	if len(v) == 0 {
-		logx.Debug("Command handler, len of the input array is 0")
 		return resp.NewError(ErrFmtNoCommand).WriteTo(ex.Buffer)
 	}
 
 	args := v.ToArgs()
-	logx.Debugf("Command handling:%v", humanArgs(args))
 
 	cmd := strings.ToLower(args[0].String())
 	a, err := findCmdFunc(cmd)
 	if err != nil {
-		logx.Debugf("Command handler, cannt found command: %v", cmd)
 		return resp.NewError(ErrFmtUnknownCommand, cmd).WriteTo(ex.Buffer)
 	}
 
@@ -148,7 +150,7 @@ const (
 	ErrAuthed                 = `NOAUTH Authentication required.`
 	ErrWrongPassword          = `ERR invalid password`
 	ErrNoNeedPassword         = `ERR Client sent AUTH, but no password is set`
-	ErrSelectInvalidIndex     = `ERR invalid DB index`
+	ErrSelectInvalidIndex     = `ERR DB index is out of range`
 	ErrNotValidInt            = `ERR value is not an integer or out of range`
 	ErrNotValidFloat          = `ERR value is not a valid float`
 	ErrBitOPNotError          = `ERR BITOP NOT must be called with a single source key.`

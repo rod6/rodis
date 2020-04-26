@@ -1,4 +1,4 @@
-// Copyright (c) 2015, Rod Dong <rod.dong@gmail.com>
+// Copyright (c) 2020, Rod Dong <rod.dong@gmail.com>
 // All rights reserved.
 //
 // Use of this source code is governed by The MIT License.
@@ -15,23 +15,28 @@
 // Metadata format:
 //      first byte: meta data version
 //      second byte: lower 4 bits: RedisType, upper 4 bits: if has expire value
-//      3rd - 18th: the time binary, represent the expire time.
-// Valuekey always has a prefix: '-'. For hash/set data type, use seperator '|' to seperate the
+//      remained bytes: attributes for different bytes
+//
+// Valuekey always has a prefix: '-'. For hash/set data type, use '|' as seperator.
 //
 // String Type:
-//      +StringKey   -> metadata
+//      +StringKey   -> metadata (only 2 bytes)
 //      -StringKey   -> string value
 //
 // Hash Type:
-//      +HashKey        -> metadata
+//      +HashKey        -> metadata (only 2 bytes)
 //      -HashKey|Field1 -> value1
 //      -HashKey|Field2 -> value2
 //      -HashKey|Field3 -> value3
 //
 // List Type:
-//      +ListKey            -> metadata
-//      -ListKey|0x0000     -> start, len
-//      -ListKey|0x00000000 -> 0
-//      -ListKey|0x00000001 -> 1
+//      +ListKey            -> metadata (2bytes + uint32 len for length of list + uint32 for head + uint32 for tail)
+//      -ListKey|0x00000000 -> 0x00000001|0x00000000|0 (next|prev|value)
+//      -ListKey|0x00000001 -> 0x00000001|0x00000000|1 (next|prev|value)
+//
+// Expire Hash: to store expire of keys, using time.Unix value
+//      +SYSExpire -> metadata (as hash)
+//      -SYSExpire|rKey -> time.Unix()
+//
 
 package storage

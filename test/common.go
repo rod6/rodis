@@ -20,10 +20,12 @@ func init() {
 			if err != nil {
 				return nil, err
 			}
-			if _, err := re.Do("AUTH", "password"); err != nil {
-				re.Close()
-				return nil, err
-			}
+			/*
+				if _, err := re.Do("AUTH", "password"); err != nil {
+					re.Close()
+					return nil, err
+				}
+			*/
 			return re, err
 		},
 		TestOnBorrow: func(c redis.Conn, t time.Time) error {

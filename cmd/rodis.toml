@@ -3,7 +3,7 @@ version = 0.01
 owner = "rod6"
 
 listen = ":6379"
-requirepass = "password"
+requirepass = ""
 loglevel = "debug"
 
 leveldbpath = "/Users/rod/Develop/db/rodis"

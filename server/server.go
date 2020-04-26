@@ -1,4 +1,4 @@
-// Copyright (c) 2015, Rod Dong <rod.dong@gmail.com>
+// Copyright (c) 2020, Rod Dong <rod.dong@gmail.com>
 // All rights reserved.
 //
 // Use of this source code is governed by The MIT License.

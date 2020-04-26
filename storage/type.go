@@ -1,4 +1,4 @@
-// Copyright (c) 2015, Rod Dong <rod.dong@gmail.com>
+// Copyright (c) 2020, Rod Dong <rod.dong@gmail.com>
 // All rights reserved.
 //
 // Use of this source code is governed by The MIT License.
@@ -7,7 +7,6 @@ package storage
 
 import (
 	"errors"
-	"time"
 
 	"github.com/syndtr/goleveldb/leveldb"
 )
@@ -64,56 +63,24 @@ func encodeMetaKey(key []byte) []byte {
 	return metaKey
 }
 
-func encodeMetadata(tipe byte, expireAt *time.Time) []byte {
-	if expireAt == nil || expireAt.IsZero() {
+func encodeMetadata(tipe byte, expire bool) []byte {
+	if !expire {
 		return []byte{MetaVersion, tipe}
 	}
 
-	expire, _ := expireAt.MarshalBinary()
-	metadata := make([]byte, 1 /*version*/ +1 /*hasExpire + type*/ +len(expire))
-	metadata[0] = MetaVersion
-	metadata[1] = 0x10 | tipe
-	copy(metadata[2:], expire)
-
-	return metadata
+	return []byte{MetaVersion, 0x10 | tipe}
 }
 
-func parseMetadata(metadata []byte) (byte, *time.Time, error) {
+func parseMetadata(metadata []byte) (byte, bool, error) {
 	if len(metadata) < 2 {
-		return None, nil, ErrMetaFormat
+		return None, false, ErrMetaFormat
 	}
 	if metadata[0] != MetaVersion {
-		return None, nil, ErrMetaFormat
+		return None, false, ErrMetaFormat
 	}
 
 	tipe := metadata[1] & 0x0F // lower 4 bits of metadata[1] is type
-	hasExpire := metadata[1]&byte(0xF0) == byte(0x10)
+	expire := metadata[1]&byte(0xF0) == byte(0x10)
 
-	if !hasExpire {
-		return tipe, nil, nil
-	}
-
-	var expireAt time.Time
-	err := expireAt.UnmarshalBinary(metadata[2:])
-	if err != nil {
-		return None, nil, ErrMetaFormat
-	}
-
-	return tipe, &expireAt, nil
-}
-
-func encodeStringKey(key []byte) []byte {
-	valueKey := make([]byte, 1 /* '+' */ +len(key))
-	valueKey[0] = ValuePrefix
-	copy(valueKey[1:], key)
-	return valueKey
-}
-
-func encodeHashFieldKey(key []byte, field []byte) []byte {
-	fieldKey := make([]byte, 1 /* '-' */ +len(key)+1 /* '|' */ +len(field))
-	fieldKey[0] = ValuePrefix
-	copy(fieldKey[1:], key)
-	fieldKey[1+len(key)] = Seperator
-	copy(fieldKey[1+len(key)+1:], field)
-	return fieldKey
+	return tipe, expire, nil
 }

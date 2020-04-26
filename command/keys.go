@@ -1,4 +1,4 @@
-// Copyright (c) 2015, Rod Dong <rod.dong@gmail.com>
+// Copyright (c) 2020, Rod Dong <rod.dong@gmail.com>
 // All rights reserved.
 //
 // Use of this source code is governed by The MIT License.
@@ -7,9 +7,26 @@
 package command
 
 import (
+	"strconv"
+	"time"
+
 	"github.com/rod6/rodis/resp"
 	"github.com/rod6/rodis/storage"
 )
+
+// Implement for following commands
+//
+// command		status		author		todo
+// --------------------------------------------------
+// DEL          done        rod
+// EXIST        done        rod
+// EXPIRE       done        rod
+// EXPIREAT     done        rod
+// PEXPIRE      done        rod
+// PEXPIREAT    done        rod
+// PTTL         done        rod
+// TTL          done        rod
+// TYPE         done        rod
 
 // del => https://redis.io/commands/del
 func del(v resp.CommandArgs, ex *Extras) error {
@@ -22,8 +39,8 @@ func del(v resp.CommandArgs, ex *Extras) error {
 
 	count := 0
 	for _, key := range v {
-		exists, tipe, _ := ex.DB.Has(key)
-		if !exists {
+		exist, tipe, _ := ex.DB.Has(key)
+		if !exist {
 			continue
 		}
 		switch tipe {
@@ -49,8 +66,8 @@ func exists(v resp.CommandArgs, ex *Extras) error {
 
 	count := 0
 	for _, key := range v {
-		exists, _, _ := ex.DB.Has(key)
-		if !exists {
+		exist, _, _ := ex.DB.Has(key)
+		if !exist {
 			continue
 		}
 		count++
@@ -58,13 +75,142 @@ func exists(v resp.CommandArgs, ex *Extras) error {
 	return resp.Integer(count).WriteTo(ex.Buffer)
 }
 
+// expire -> https://redis.io/commands/expire
+func expire(v resp.CommandArgs, ex *Extras) error {
+	expire, err := strconv.ParseInt(string(v[1]), 10, 32)
+	if err != nil {
+		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
+	}
+
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	exist, tipe, _ := ex.DB.Has(v[0])
+
+	if !exist {
+		return resp.ZeroInteger.WriteTo(ex.Buffer)
+	}
+
+	at := time.Now().Add(time.Duration(expire) * time.Second)
+	ex.DB.SetExpireInMeta(v[0], tipe)
+	ex.DB.SetExpireAt(v[0], &at)
+
+	return resp.OneInteger.WriteTo(ex.Buffer)
+}
+
+// expireat -> https://redis.io/commands/expireat
+func expireat(v resp.CommandArgs, ex *Extras) error {
+	expireat, err := strconv.ParseInt(string(v[1]), 10, 64)
+	if err != nil {
+		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
+	}
+
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	exist, tipe, _ := ex.DB.Has(v[0])
+
+	if !exist {
+		return resp.ZeroInteger.WriteTo(ex.Buffer)
+	}
+
+	at := time.Unix(expireat, 0)
+	ex.DB.SetExpireInMeta(v[0], tipe)
+	ex.DB.SetExpireAt(v[0], &at)
+
+	return resp.OneInteger.WriteTo(ex.Buffer)
+}
+
+// pexpire -> https://redis.io/commands/pexpire
+func pexpire(v resp.CommandArgs, ex *Extras) error {
+	pexpire, err := strconv.ParseInt(string(v[1]), 10, 32)
+	if err != nil {
+		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
+	}
+
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	exist, tipe, _ := ex.DB.Has(v[0])
+
+	if !exist {
+		return resp.ZeroInteger.WriteTo(ex.Buffer)
+	}
+
+	at := time.Now().Add(time.Duration(pexpire) * time.Millisecond)
+	ex.DB.SetExpireInMeta(v[0], tipe)
+	ex.DB.SetExpireAt(v[0], &at)
+
+	return resp.OneInteger.WriteTo(ex.Buffer)
+}
+
+// pexpireat -> https://redis.io/commands/expireat
+func pexpireat(v resp.CommandArgs, ex *Extras) error {
+	pexpireat, err := strconv.ParseInt(string(v[1]), 10, 64)
+	if err != nil {
+		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
+	}
+
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	exist, tipe, _ := ex.DB.Has(v[0])
+
+	if !exist {
+		return resp.ZeroInteger.WriteTo(ex.Buffer)
+	}
+
+	at := time.Unix(0, pexpireat)
+	ex.DB.SetExpireInMeta(v[0], tipe)
+	ex.DB.SetExpireAt(v[0], &at)
+
+	return resp.OneInteger.WriteTo(ex.Buffer)
+}
+
+// pttl -> https://redis.io/commands/pttl
+func pttl(v resp.CommandArgs, ex *Extras) error {
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	exist, _, _ := ex.DB.Has(v[0])
+
+	if !exist {
+		return resp.NegativeOneInteger.WriteTo(ex.Buffer)
+	}
+
+	at := ex.DB.GetExpireAt(v[0])
+
+	duration := at.Sub(time.Now())
+	ttl := duration / time.Millisecond
+	return resp.Integer(ttl).WriteTo(ex.Buffer)
+}
+
+// ttl -> https://redis.io/commands/ttl
+func ttl(v resp.CommandArgs, ex *Extras) error {
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	exist, _, _ := ex.DB.Has(v[0])
+
+	if !exist {
+		return resp.NegativeOneInteger.WriteTo(ex.Buffer)
+	}
+
+	at := ex.DB.GetExpireAt(v[0])
+
+	duration := at.Sub(time.Now())
+	ttl := duration / time.Second
+	return resp.Integer(ttl).WriteTo(ex.Buffer)
+}
+
+// tipe -> https://redis.io/commands/type
 func tipe(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	exists, tipe, _ := ex.DB.Has(v[0])
+	exist, tipe, _ := ex.DB.Has(v[0])
 
-	if !exists {
+	if !exist {
 		return resp.SimpleString(storage.TypeString[storage.None]).WriteTo(ex.Buffer)
 	}
 	return resp.SimpleString(storage.TypeString[tipe]).WriteTo(ex.Buffer)

@@ -1,4 +1,4 @@
-// Copyright (c) 2015, Rod Dong <rod.dong@gmail.com>
+// Copyright (c) 2020, Rod Dong <rod.dong@gmail.com>
 // All rights reserved.
 //
 // Use of this source code is governed by The MIT License.
@@ -85,7 +85,7 @@ func (rc *rodisConn) response(respType resp.RESPType, respValue resp.Value) {
 		if err := recover(); err != nil {
 			stack := make([]byte, 2048)
 			stack = stack[:runtime.Stack(stack, false)]
-			logx.Errorf("Panci in handling connection %v, command is %v, err is %s\n%s", rc.uuid, respValue, err, stack)
+			logx.Errorf("Panic in handling connection %v, command is %v, err is %s\n%s", rc.uuid, respValue, err, stack)
 			rc.conn.Write([]byte("-ERR server unknown error\r\n"))
 		}
 	}()

@@ -1,4 +1,4 @@
-// Copyright (c) 2015, Rod Dong <rod.dong@gmail.com>
+// Copyright (c) 2020, Rod Dong <rod.dong@gmail.com>
 // All rights reserved.
 //
 // Use of this source code is governed by The MIT License.
@@ -51,13 +51,13 @@ func appendx(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exists, tipe, expireAt := ex.DB.Has(v[0])
-	if exists && tipe != storage.String {
+	exist, tipe, expire := ex.DB.Has(v[0])
+	if exist && tipe != storage.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
 	val := []byte("")
-	if exists {
+	if exist {
 		val = ex.DB.GetString(v[0])
 	}
 	if len(val)+len(v[1]) > STRLIMIT {
@@ -65,7 +65,7 @@ func appendx(v resp.CommandArgs, ex *Extras) error {
 	}
 
 	val = append(val, v[1]...)
-	ex.DB.PutString(v[0], val, expireAt)
+	ex.DB.PutString(v[0], val, expire)
 	return resp.Integer(len(val)).WriteTo(ex.Buffer)
 }
 
@@ -78,8 +78,8 @@ func bitcount(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	exists, tipe, _ := ex.DB.Has(v[0])
-	if !exists {
+	exist, tipe, _ := ex.DB.Has(v[0])
+	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
 	if tipe != storage.String {
@@ -137,11 +137,11 @@ func bitop(v resp.CommandArgs, ex *Extras) error {
 		if len(v) > 3 {
 			return resp.NewError(ErrBitOPNotError).WriteTo(ex.Buffer)
 		}
-		exists, tipe, _ := ex.DB.Has(v[2])
-		if !exists {
+		exist, tipe, expire := ex.DB.Has(v[2])
+		if !exist {
 			return resp.ZeroInteger.WriteTo(ex.Buffer)
 		}
-		if exists && tipe != storage.String {
+		if exist && tipe != storage.String {
 			return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 		}
 
@@ -151,18 +151,18 @@ func bitop(v resp.CommandArgs, ex *Extras) error {
 			destValue[i] = ^b
 		}
 
-		ex.DB.PutString(v[1], destValue, nil)
+		ex.DB.PutString(v[1], destValue, expire)
 		return resp.Integer(len(destValue)).WriteTo(ex.Buffer)
 
 	case "or", "and", "xor":
 		var destValue []byte = nil
 		for _, b := range v[2:] {
-			exists, tipe, _ := ex.DB.Has(b)
-			if exists && tipe != storage.String {
+			exist, tipe, _ := ex.DB.Has(b)
+			if exist && tipe != storage.String {
 				return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 			}
 			val := ex.DB.GetString(b)
-			if exists && len(destValue) < len(val) {
+			if exist && len(destValue) < len(val) {
 				if len(destValue) == 0 { // loop first step
 					destValue = append(destValue, val...)
 					continue
@@ -172,7 +172,7 @@ func bitop(v resp.CommandArgs, ex *Extras) error {
 			}
 			for i := range destValue {
 				s := byte(0)
-				if exists && i < len(val) {
+				if exist && i < len(val) {
 					s = val[i]
 				}
 				switch op {
@@ -185,7 +185,7 @@ func bitop(v resp.CommandArgs, ex *Extras) error {
 				}
 			}
 		}
-		ex.DB.PutString(v[1], destValue, nil)
+		ex.DB.PutString(v[1], destValue, false)
 		return resp.Integer(len(destValue)).WriteTo(ex.Buffer)
 
 	default:
@@ -210,21 +210,21 @@ func bitpos(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	exists, tipe, _ := ex.DB.Has(v[0])
-	if exists && tipe != storage.String {
+	exist, tipe, _ := ex.DB.Has(v[0])
+	if exist && tipe != storage.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
 	// This is the same behavior as offical redis. Not sure why
 	// not check the len(v) when key is missing
-	if !exists && set {
+	if !exist && set {
 		return resp.NegativeOneInteger.WriteTo(ex.Buffer)
 	}
-	if !exists && clear {
+	if !exist && clear {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
 
-	// Seam that: check the len(v) only when the key exists
+	// Seam that: check the len(v) only when the key exist
 	if len(v) > 4 {
 		return resp.NewError(ErrFmtSyntax).WriteTo(ex.Buffer)
 	}
@@ -318,8 +318,8 @@ func get(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	exists, tipe, _ := ex.DB.Has(v[0])
-	if !exists {
+	exist, tipe, _ := ex.DB.Has(v[0])
+	if !exist {
 		return resp.NilBulkString.WriteTo(ex.Buffer)
 	}
 	if tipe != storage.String {
@@ -334,8 +334,8 @@ func getbit(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	exists, tipe, _ := ex.DB.Has(v[0])
-	if !exists {
+	exist, tipe, _ := ex.DB.Has(v[0])
+	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
 	if tipe != storage.String {
@@ -375,8 +375,8 @@ func getrange(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	exists, tipe, _ := ex.DB.Has(v[0])
-	if !exists {
+	exist, tipe, _ := ex.DB.Has(v[0])
+	if !exist {
 		return resp.EmptyBulkString.WriteTo(ex.Buffer)
 	}
 	if tipe != storage.String {
@@ -401,18 +401,18 @@ func getset(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exists, tipe, expireAt := ex.DB.Has(v[0])
-	if exists && tipe != storage.String {
+	exist, tipe, expire := ex.DB.Has(v[0])
+	if exist && tipe != storage.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 	var oldValue []byte
-	if exists {
+	if exist {
 		oldValue = ex.DB.GetString(v[0])
 	}
 
-	ex.DB.PutString(v[0], v[1], expireAt)
+	ex.DB.PutString(v[0], v[1], expire)
 
-	if !exists {
+	if !exist {
 		return resp.NilBulkString.WriteTo(ex.Buffer)
 	}
 	return resp.BulkString(oldValue).WriteTo(ex.Buffer)
@@ -442,13 +442,13 @@ func incrbyfloat(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exists, tipe, expireAt := ex.DB.Has(v[0])
-	if exists && tipe != storage.String {
+	exist, tipe, expire := ex.DB.Has(v[0])
+	if exist && tipe != storage.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
 	newVal := 0.0
-	if !exists {
+	if !exist {
 		newVal += by
 	} else {
 		val := ex.DB.GetString(v[0])
@@ -460,7 +460,7 @@ func incrbyfloat(v resp.CommandArgs, ex *Extras) error {
 	}
 
 	s := []byte(strconv.FormatFloat(newVal, 'f', -1, 64))
-	ex.DB.PutString(v[0], s, expireAt)
+	ex.DB.PutString(v[0], s, expire)
 	return resp.BulkString(s).WriteTo(ex.Buffer)
 }
 
@@ -475,8 +475,8 @@ func mget(v resp.CommandArgs, ex *Extras) error {
 
 	arr := make(resp.Array, len(v))
 	for i, g := range v {
-		exists, tipe, _ := ex.DB.Has(g)
-		if !exists || tipe != storage.String {
+		exist, tipe, _ := ex.DB.Has(g)
+		if !exist || tipe != storage.String {
 			arr[i] = resp.NilBulkString
 		} else {
 			val := ex.DB.GetString(g)
@@ -497,7 +497,7 @@ func mset(v resp.CommandArgs, ex *Extras) error {
 	defer ex.DB.Unlock()
 
 	for i := 0; i < len(v); {
-		ex.DB.PutString(v[i], v[i+1], nil)
+		ex.DB.PutString(v[i], v[i+1], false)
 		i += 2
 	}
 
@@ -514,15 +514,15 @@ func msetnx(v resp.CommandArgs, ex *Extras) error {
 	defer ex.DB.Unlock()
 
 	for i := 0; i < len(v); {
-		exists, _, _ := ex.DB.Has(v[i])
-		if exists {
-			return resp.ZeroInteger.WriteTo(ex.Buffer) // If any key exists, return 0
+		exist, _, _ := ex.DB.Has(v[i])
+		if exist {
+			return resp.ZeroInteger.WriteTo(ex.Buffer) // If any key exist, return 0
 		}
 		i += 2
 	}
 
 	for i := 0; i < len(v); { // every key does not exist, put all into level db.
-		ex.DB.PutString(v[i], v[i+1], nil)
+		ex.DB.PutString(v[i], v[i+1], false)
 		i += 2
 	}
 
@@ -539,18 +539,10 @@ func psetex(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	expireAt := time.Now().Add(time.Duration(expire) * time.Millisecond)
-	timer := time.NewTimer(time.Duration(expire) * time.Millisecond)
+	at := time.Now().Add(time.Duration(expire) * time.Millisecond)
 
-	ex.DB.PutString(v[0], v[2], &expireAt)
-
-	go func(k string) {
-		<-timer.C
-
-		ex.DB.Lock()
-		defer ex.DB.Unlock()
-		ex.DB.DeleteString([]byte(k))
-	}(string(v[0]))
+	ex.DB.PutString(v[0], v[2], true)
+	ex.DB.SetExpireAt(v[0], &at)
 
 	return resp.OkSimpleString.WriteTo(ex.Buffer)
 }
@@ -565,7 +557,8 @@ func set(v resp.CommandArgs, ex *Extras) error {
 	defer ex.DB.Unlock()
 
 	if len(v) == 2 {
-		ex.DB.PutString(v[0], v[1], nil)
+		ex.DB.PutString(v[0], v[1], false)
+		ex.DB.ClearExpireAt(v[0])
 		return resp.OkSimpleString.WriteTo(ex.Buffer)
 	}
 
@@ -603,14 +596,14 @@ func set(v resp.CommandArgs, ex *Extras) error {
 	}
 
 	if optionNx && optionXx {
-		return resp.NilBulkString.WriteTo(ex.Buffer)
+		return resp.NewError(ErrSyntax).WriteTo(ex.Buffer)
 	}
 
-	exists, _, _ := ex.DB.Has(v[0])
-	if optionNx && exists {
+	exist, _, _ := ex.DB.Has(v[0])
+	if optionNx && exist {
 		return resp.NilBulkString.WriteTo(ex.Buffer)
 	}
-	if optionXx && !exists {
+	if optionXx && !exist {
 		return resp.NilBulkString.WriteTo(ex.Buffer)
 	}
 	if len(v[1]) > STRLIMIT {
@@ -618,30 +611,20 @@ func set(v resp.CommandArgs, ex *Extras) error {
 	}
 
 	if !optionEx {
-		ex.DB.PutString(v[0], v[1], nil)
+		ex.DB.PutString(v[0], v[1], false)
 		return resp.OkSimpleString.WriteTo(ex.Buffer)
 	}
 
-	var expireAt time.Time
-	var timer *time.Timer
+	var at time.Time
 	switch expireOp {
 	case "ex":
-		expireAt = time.Now().Add(time.Duration(expireVal) * time.Second)
-		timer = time.NewTimer(time.Duration(expireVal) * time.Second)
+		at = time.Now().Add(time.Duration(expireVal) * time.Second)
 	case "px":
-		expireAt = time.Now().Add(time.Duration(expireVal) * time.Millisecond)
-		timer = time.NewTimer(time.Duration(expireVal) * time.Millisecond)
+		at = time.Now().Add(time.Duration(expireVal) * time.Millisecond)
 	}
 
-	ex.DB.PutString(v[0], v[1], &expireAt)
-
-	go func(k string) {
-		<-timer.C
-
-		ex.DB.Lock()
-		defer ex.DB.Unlock()
-		ex.DB.DeleteString([]byte(k))
-	}(string(v[0]))
+	ex.DB.PutString(v[0], v[1], true)
+	ex.DB.SetExpireAt(v[0], &at)
 
 	return resp.OkSimpleString.WriteTo(ex.Buffer)
 }
@@ -668,13 +651,13 @@ func setbit(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exists, tipe, expireAt := ex.DB.Has(v[0])
-	if exists && tipe != storage.String {
+	exist, tipe, expire := ex.DB.Has(v[0])
+	if exist && tipe != storage.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
 	val := []byte("")
-	if exists {
+	if exist {
 		val = ex.DB.GetString(v[0])
 	}
 
@@ -693,7 +676,7 @@ func setbit(v resp.CommandArgs, ex *Extras) error {
 		val[byten] = val[byten] | set
 	}
 
-	ex.DB.PutString(v[0], val, expireAt)
+	ex.DB.PutString(v[0], val, expire)
 	return resp.Integer(k).WriteTo(ex.Buffer)
 }
 
@@ -707,18 +690,10 @@ func setex(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	expireAt := time.Now().Add(time.Duration(expire) * time.Second)
-	timer := time.NewTimer(time.Duration(expire) * time.Second)
+	at := time.Now().Add(time.Duration(expire) * time.Second)
 
-	ex.DB.PutString(v[0], v[2], &expireAt)
-
-	go func(k string) {
-		<-timer.C
-
-		ex.DB.Lock()
-		defer ex.DB.Unlock()
-		ex.DB.DeleteString([]byte(k))
-	}(string(v[0]))
+	ex.DB.PutString(v[0], v[2], true)
+	ex.DB.SetExpireAt(v[0], &at)
 
 	return resp.OkSimpleString.WriteTo(ex.Buffer)
 }
@@ -728,12 +703,12 @@ func setnx(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exists, _, _ := ex.DB.Has(v[0])
-	if exists {
+	exist, _, _ := ex.DB.Has(v[0])
+	if exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
 
-	ex.DB.PutString(v[0], v[1], nil)
+	ex.DB.PutString(v[0], v[1], false)
 	return resp.OneInteger.WriteTo(ex.Buffer)
 
 }
@@ -755,13 +730,13 @@ func setrange(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exists, tipe, expireAt := ex.DB.Has(v[0])
-	if exists && tipe != storage.String {
+	exist, tipe, expire := ex.DB.Has(v[0])
+	if exist && tipe != storage.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
 	val := []byte("")
-	if exists {
+	if exist {
 		val = ex.DB.GetString(v[0])
 	}
 
@@ -770,7 +745,7 @@ func setrange(v resp.CommandArgs, ex *Extras) error {
 	}
 	copy(val[offset:], v[2])
 
-	ex.DB.PutString(v[0], val, expireAt)
+	ex.DB.PutString(v[0], val, expire)
 	return resp.Integer(len(val)).WriteTo(ex.Buffer)
 }
 
@@ -779,8 +754,8 @@ func strlen(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	exists, tipe, _ := ex.DB.Has(v[0])
-	if !exists {
+	exist, tipe, _ := ex.DB.Has(v[0])
+	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
 	if tipe != storage.String {
@@ -877,13 +852,13 @@ func incrdecrHelper(v resp.CommandArgs, ex *Extras, by int64) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exists, tipe, expireAt := ex.DB.Has(v[0])
-	if exists && tipe != storage.String {
+	exist, tipe, expire := ex.DB.Has(v[0])
+	if exist && tipe != storage.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
 	newVal := int64(0)
-	if !exists {
+	if !exist {
 		newVal += by
 	} else {
 		val := ex.DB.GetString(v[0])
@@ -894,6 +869,6 @@ func incrdecrHelper(v resp.CommandArgs, ex *Extras, by int64) error {
 		newVal = i + by
 	}
 
-	ex.DB.PutString(v[0], []byte(strconv.FormatInt(newVal, 10)), expireAt)
+	ex.DB.PutString(v[0], []byte(strconv.FormatInt(newVal, 10)), expire)
 	return resp.Integer(newVal).WriteTo(ex.Buffer)
 }
