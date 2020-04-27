@@ -16,17 +16,17 @@ import (
 
 // Implement for following commands
 //
-// command		status		author		todo
-// --------------------------------------------------
-// DEL          done        rod
-// EXIST        done        rod
-// EXPIRE       done        rod
-// EXPIREAT     done        rod
-// PEXPIRE      done        rod
-// PEXPIREAT    done        rod
-// PTTL         done        rod
-// TTL          done        rod
-// TYPE         done        rod
+// command		status
+// ---------------------
+// DEL          done
+// EXIST        done
+// EXPIRE       done
+// EXPIREAT     done
+// PEXPIRE      done
+// PEXPIREAT    done
+// PTTL         done
+// TTL          done
+// TYPE         done
 
 // del => https://redis.io/commands/del
 func del(v resp.CommandArgs, ex *Extras) error {
@@ -39,7 +39,7 @@ func del(v resp.CommandArgs, ex *Extras) error {
 
 	count := 0
 	for _, key := range v {
-		exist, tipe, _ := ex.DB.Has(key)
+		exist, tipe := ex.DB.Has(key)
 		if !exist {
 			continue
 		}
@@ -48,6 +48,8 @@ func del(v resp.CommandArgs, ex *Extras) error {
 			ex.DB.DeleteString(key)
 		case storage.Hash:
 			ex.DB.DeleteHash(key)
+		case storage.List:
+			ex.DB.DeleteList(key)
 		}
 
 		count++
@@ -66,7 +68,7 @@ func exists(v resp.CommandArgs, ex *Extras) error {
 
 	count := 0
 	for _, key := range v {
-		exist, _, _ := ex.DB.Has(key)
+		exist, _ := ex.DB.Has(key)
 		if !exist {
 			continue
 		}
@@ -85,14 +87,13 @@ func expire(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exist, tipe, _ := ex.DB.Has(v[0])
+	exist, _ := ex.DB.Has(v[0])
 
 	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
 
 	at := time.Now().Add(time.Duration(expire) * time.Second)
-	ex.DB.SetExpireInMeta(v[0], tipe)
 	ex.DB.SetExpireAt(v[0], &at)
 
 	return resp.OneInteger.WriteTo(ex.Buffer)
@@ -108,14 +109,13 @@ func expireat(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exist, tipe, _ := ex.DB.Has(v[0])
+	exist, _ := ex.DB.Has(v[0])
 
 	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
 
 	at := time.Unix(expireat, 0)
-	ex.DB.SetExpireInMeta(v[0], tipe)
 	ex.DB.SetExpireAt(v[0], &at)
 
 	return resp.OneInteger.WriteTo(ex.Buffer)
@@ -131,14 +131,13 @@ func pexpire(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exist, tipe, _ := ex.DB.Has(v[0])
+	exist, _ := ex.DB.Has(v[0])
 
 	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
 
 	at := time.Now().Add(time.Duration(pexpire) * time.Millisecond)
-	ex.DB.SetExpireInMeta(v[0], tipe)
 	ex.DB.SetExpireAt(v[0], &at)
 
 	return resp.OneInteger.WriteTo(ex.Buffer)
@@ -154,14 +153,13 @@ func pexpireat(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exist, tipe, _ := ex.DB.Has(v[0])
+	exist, _ := ex.DB.Has(v[0])
 
 	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
 
 	at := time.Unix(0, pexpireat)
-	ex.DB.SetExpireInMeta(v[0], tipe)
 	ex.DB.SetExpireAt(v[0], &at)
 
 	return resp.OneInteger.WriteTo(ex.Buffer)
@@ -172,13 +170,16 @@ func pttl(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exist, _, _ := ex.DB.Has(v[0])
+	exist, _ := ex.DB.Has(v[0])
 
 	if !exist {
 		return resp.NegativeOneInteger.WriteTo(ex.Buffer)
 	}
 
 	at := ex.DB.GetExpireAt(v[0])
+	if at == nil {
+		return resp.NegativeOneInteger.WriteTo(ex.Buffer)
+	}
 
 	duration := at.Sub(time.Now())
 	ttl := duration / time.Millisecond
@@ -190,13 +191,16 @@ func ttl(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exist, _, _ := ex.DB.Has(v[0])
+	exist, _ := ex.DB.Has(v[0])
 
 	if !exist {
 		return resp.NegativeOneInteger.WriteTo(ex.Buffer)
 	}
 
 	at := ex.DB.GetExpireAt(v[0])
+	if at == nil {
+		return resp.NegativeOneInteger.WriteTo(ex.Buffer)
+	}
 
 	duration := at.Sub(time.Now())
 	ttl := duration / time.Second
@@ -208,7 +212,7 @@ func tipe(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	exist, tipe, _ := ex.DB.Has(v[0])
+	exist, tipe := ex.DB.Has(v[0])
 
 	if !exist {
 		return resp.SimpleString(storage.TypeString[storage.None]).WriteTo(ex.Buffer)

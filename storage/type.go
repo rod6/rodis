@@ -63,24 +63,19 @@ func encodeMetaKey(key []byte) []byte {
 	return metaKey
 }
 
-func encodeMetadata(tipe byte, expire bool) []byte {
-	if !expire {
-		return []byte{MetaVersion, tipe}
-	}
-
-	return []byte{MetaVersion, 0x10 | tipe}
+func encodeMetadata(tipe byte) []byte {
+	return []byte{MetaVersion, tipe}
 }
 
-func parseMetadata(metadata []byte) (byte, bool, error) {
+func parseMetadata(metadata []byte) (byte, error) {
 	if len(metadata) < 2 {
-		return None, false, ErrMetaFormat
+		return None, ErrMetaFormat
 	}
 	if metadata[0] != MetaVersion {
-		return None, false, ErrMetaFormat
+		return None, ErrMetaFormat
 	}
 
-	tipe := metadata[1] & 0x0F // lower 4 bits of metadata[1] is type
-	expire := metadata[1]&byte(0xF0) == byte(0x10)
+	tipe := metadata[1]
 
-	return tipe, expire, nil
+	return tipe, nil
 }

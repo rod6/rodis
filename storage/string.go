@@ -32,17 +32,17 @@ func (ldb *LevelDB) GetString(key []byte) []byte {
 }
 
 // PutString writes string data to leveldb
-func (ldb *LevelDB) PutString(key []byte, value []byte, expire bool) {
+func (ldb *LevelDB) PutString(key []byte, value []byte) {
 	metaKey := encodeMetaKey(key)
 	valueKey := encodeStringKey(key)
 
-	exists, tipe, _ := ldb.has(metaKey)
+	exists, tipe := ldb.has(metaKey)
 	if exists && tipe != String { // If exists data is not string, should delete it.
 		ldb.delete([][]byte{metaKey, valueKey})
 	}
 
 	batch := new(leveldb.Batch)
-	batch.Put(metaKey, encodeMetadata(String, expire))
+	batch.Put(metaKey, encodeMetadata(String))
 	batch.Put(valueKey, value)
 	if err := ldb.db.Write(batch, nil); err != nil {
 		panic(err)

@@ -95,6 +95,43 @@ var commands = map[string]*attr{
 	"hsetnx":       {hsetnx, 4},
 	"hstrlen":      {hstrlen, 3},
 	"hvals":        {hvals, 2},
+
+	// lists
+	"lindex":  {lindex, 3},
+	"llen":    {llen, 2},
+	"lpop":    {lpop, 2},
+	"lpush":   {lpush, 0},
+	"lpushx":  {lpushx, 0},
+	"rpop":    {rpop, 2},
+	"rpush":   {rpush, 0},
+	"rpushx":  {rpushx, 0},
+	"lrange":  {lrange, 4},
+	"linsert": {linsert, 5},
+	"lset":    {lset, 4},
+	/*
+		"lrem":      {lrem, 0},
+		"ltrim":     {ltrim, 0},
+		"rpoplpush": {rpoplpush, 0},
+	*/
+
+	// sets
+	/*
+		"sadd":        {sadd, 0},
+		"scard":       {scard, 0},
+		"sdiff":       {sdiff, 0},
+		"sdiffstore":  {sidffstore, 0},
+		"sinter":      {sinter, 0},
+		"sinterstore": {sinterstore, 0},
+		"sismember":   {sismember, 0},
+		"smembers":    {smembers, 0},
+		"smove":       {smove, 0},
+		"spop":        {spop, 0},
+		"srandmember": {srandmember, 0},
+		"srem":        {srem, 0},
+		"sscan":       {sscan, 0},
+		"sunion":      {sunion, 0},
+		"sunionstore": {sunionstore, 0},
+	*/
 }
 
 // Get command handler
@@ -160,4 +197,6 @@ const (
 	ErrBitValueInvalid        = `ERR bit is not an integer or out of range`
 	ErrStringExccedLimit      = `ERR string exceeds maximum allowed size (512MB)`
 	ErrOffsetOutRange         = `ERR offset is out of range`
+	ErrNoSuchKey              = `ERR no such key`
+	ErrIndexOutRange          = `ERR index out of range`
 )

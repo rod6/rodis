@@ -15,23 +15,23 @@ import (
 
 // Implement for command list in http://redis.io/commands#hash
 //
-// command		status		author		todo
-// --------------------------------------------------
-// HDEL         done        Rod
-// HEXISTS      done        Rod
-// HGET         done        rod
-// HGETALL      done        rod
-// HINCRBY      done        rod
-// HINCRBYFLOAT done        rod
-// HKEYS        done        rod
-// HLEN         done        rod
-// HMGET        done        rod
-// HMSET        done        rod
-// HSCAN        done        rod
-// HSET         done        rod
-// HSETNX       done        rod
-// HSTRLEN      done        rod
-// HVALS        done        rod
+// command		status
+// ---------------------
+// HDEL         done
+// HEXISTS      done
+// HGET         done
+// HGETALL      done
+// HINCRBY      done
+// HINCRBYFLOAT done
+// HKEYS        done
+// HLEN         done
+// HMGET        done
+// HMSET        done
+// HSCAN        done
+// HSET         done
+// HSETNX       done
+// HSTRLEN      done
+// HVALS        done
 
 // hdel -> https://redis.io/commands/hdel
 func hdel(v resp.CommandArgs, ex *Extras) error {
@@ -42,7 +42,7 @@ func hdel(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	keyExists, tipe, _ := ex.DB.Has(v[0])
+	keyExists, tipe := ex.DB.Has(v[0])
 	if !keyExists {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
@@ -71,7 +71,7 @@ func hexists(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	keyExists, tipe, _ := ex.DB.Has(v[0])
+	keyExists, tipe := ex.DB.Has(v[0])
 	if keyExists && tipe != storage.Hash {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
@@ -88,7 +88,7 @@ func hget(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	keyExists, tipe, _ := ex.DB.Has(v[0])
+	keyExists, tipe := ex.DB.Has(v[0])
 	if !keyExists {
 		return resp.NilBulkString.WriteTo(ex.Buffer)
 	}
@@ -109,7 +109,7 @@ func hgetall(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	keyExists, tipe, _ := ex.DB.Has(v[0])
+	keyExists, tipe := ex.DB.Has(v[0])
 	if !keyExists {
 		return resp.EmptyArray.WriteTo(ex.Buffer)
 	}
@@ -136,7 +136,7 @@ func hincrby(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	keyExists, tipe, expire := ex.DB.Has(v[0])
+	keyExists, tipe := ex.DB.Has(v[0])
 	if keyExists && tipe != storage.Hash {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
@@ -155,7 +155,7 @@ func hincrby(v resp.CommandArgs, ex *Extras) error {
 	}
 	hash[string(v[1])] = []byte(strconv.FormatInt(newVal, 10))
 
-	ex.DB.PutHash(v[0], hash, expire)
+	ex.DB.PutHash(v[0], storage.Hash, hash)
 	return resp.Integer(newVal).WriteTo(ex.Buffer)
 }
 
@@ -169,7 +169,7 @@ func hincrbyfloat(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exist, tipe, expire := ex.DB.Has(v[0])
+	exist, tipe := ex.DB.Has(v[0])
 	if exist && tipe != storage.Hash {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
@@ -188,7 +188,7 @@ func hincrbyfloat(v resp.CommandArgs, ex *Extras) error {
 	}
 	hash[string(v[1])] = []byte(strconv.FormatFloat(newVal, 'f', -1, 64))
 
-	ex.DB.PutHash(v[0], hash, expire)
+	ex.DB.PutHash(v[0], storage.Hash, hash)
 	return resp.BulkString(hash[string(v[1])]).WriteTo(ex.Buffer)
 }
 
@@ -197,7 +197,7 @@ func hkeys(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	keyExists, tipe, _ := ex.DB.Has(v[0])
+	keyExists, tipe := ex.DB.Has(v[0])
 	if !keyExists {
 		return resp.EmptyArray.WriteTo(ex.Buffer)
 	}
@@ -219,7 +219,7 @@ func hvals(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	keyExists, tipe, _ := ex.DB.Has(v[0])
+	keyExists, tipe := ex.DB.Has(v[0])
 	if !keyExists {
 		return resp.EmptyArray.WriteTo(ex.Buffer)
 	}
@@ -241,7 +241,7 @@ func hlen(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	keyExists, tipe, _ := ex.DB.Has(v[0])
+	keyExists, tipe := ex.DB.Has(v[0])
 	if !keyExists {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
@@ -262,7 +262,7 @@ func hmget(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	keyExists, tipe, _ := ex.DB.Has(v[0])
+	keyExists, tipe := ex.DB.Has(v[0])
 	if keyExists && tipe != storage.Hash {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
@@ -290,7 +290,7 @@ func hmset(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exist, tipe, expire := ex.DB.Has(v[0])
+	exist, tipe := ex.DB.Has(v[0])
 	if exist && tipe != storage.Hash {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
@@ -300,7 +300,7 @@ func hmset(v resp.CommandArgs, ex *Extras) error {
 		hash[string(v[i])] = v[i+1]
 		i += 2
 	}
-	ex.DB.PutHash(v[0], hash, expire)
+	ex.DB.PutHash(v[0], storage.Hash, hash)
 	return resp.OkSimpleString.WriteTo(ex.Buffer)
 }
 
@@ -309,7 +309,7 @@ func hset(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exist, tipe, expire := ex.DB.Has(v[0])
+	exist, tipe := ex.DB.Has(v[0])
 	if exist && tipe != storage.Hash {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
@@ -321,7 +321,7 @@ func hset(v resp.CommandArgs, ex *Extras) error {
 	}
 
 	hash[string(v[1])] = v[2]
-	ex.DB.PutHash(v[0], hash, expire)
+	ex.DB.PutHash(v[0], storage.Hash, hash)
 
 	if !fieldExists {
 		return resp.OneInteger.WriteTo(ex.Buffer)
@@ -334,7 +334,7 @@ func hsetnx(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
-	exist, tipe, expire := ex.DB.Has(v[0])
+	exist, tipe := ex.DB.Has(v[0])
 	if exist && tipe != storage.Hash {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
@@ -347,7 +347,7 @@ func hsetnx(v resp.CommandArgs, ex *Extras) error {
 
 	if !fieldExists {
 		hash[string(v[1])] = v[2]
-		ex.DB.PutHash(v[0], hash, expire)
+		ex.DB.PutHash(v[0], storage.Hash, hash)
 		return resp.OneInteger.WriteTo(ex.Buffer)
 	}
 	return resp.ZeroInteger.WriteTo(ex.Buffer)
@@ -358,11 +358,11 @@ func hstrlen(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
-	keyExists, tipe, _ := ex.DB.Has(v[0])
-	if !keyExists {
+	exist, tipe := ex.DB.Has(v[0])
+	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
-	if keyExists && tipe != storage.Hash {
+	if exist && tipe != storage.Hash {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 

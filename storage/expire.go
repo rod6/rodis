@@ -8,8 +8,6 @@ package storage
 import (
 	"encoding/binary"
 	"time"
-
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
 var (
@@ -30,28 +28,16 @@ func encodeExpireKey(key []byte) []byte {
 func (ldb *LevelDB) GetExpireAt(key []byte) *time.Time {
 	at := ldb.get(encodeExpireKey(key))
 	var r time.Time
-	if len(at) != 0 {
-		r = time.Unix(int64(binary.BigEndian.Uint64(at)), 0)
+	if len(at) == 0 {
+		return nil
 	}
+	r = time.Unix(int64(binary.BigEndian.Uint64(at)), 0)
 	return &r
 }
 
 // ClearExpireAt clears expire
 func (ldb *LevelDB) ClearExpireAt(key []byte) {
-	metaKey := encodeMetaKey(key)
-	expireKey := encodeExpireKey(key)
-	has, tipe, expire := ldb.Has(key)
-	if !has || !expire {
-		return
-	}
-
-	batch := new(leveldb.Batch)
-	batch.Put(metaKey, encodeMetadata(tipe, false))
-	batch.Delete(expireKey)
-	if err := ldb.db.Write(batch, nil); err != nil {
-		panic(err)
-	}
-	return
+	ldb.delete([][]byte{encodeExpireKey(key)})
 }
 
 // SetExpireAt stores the value to expire
@@ -64,9 +50,4 @@ func (ldb *LevelDB) SetExpireAt(key []byte, at *time.Time) {
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, uint64(at.Unix()))
 	ldb.put(expireKey, buf)
-}
-
-// SetExpireInMeta set expire flag in meta data.
-func (ldb *LevelDB) SetExpireInMeta(key []byte, tipe byte) {
-	ldb.put(encodeMetaKey(key), encodeMetadata(tipe, true))
 }

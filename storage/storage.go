@@ -61,7 +61,7 @@ func open(dbPath string, options *opt.Options) (*LevelDB, error) {
 	return &LevelDB{db: db, rwm: &rwmutex}, nil
 }
 
-func (ldb *LevelDB) has(metaKey []byte) (bool, byte, bool) {
+func (ldb *LevelDB) has(metaKey []byte) (bool, byte) {
 	metadata, err := ldb.db.Get(metaKey, nil)
 
 	if err != nil && err != leveldb.ErrNotFound {
@@ -69,14 +69,14 @@ func (ldb *LevelDB) has(metaKey []byte) (bool, byte, bool) {
 	}
 
 	if err == leveldb.ErrNotFound {
-		return false, None, false
+		return false, None
 	}
 
-	tipe, expire, err := parseMetadata(metadata)
+	tipe, err := parseMetadata(metadata)
 	if err != nil {
 		panic(err)
 	}
-	return true, tipe, expire
+	return true, tipe
 }
 
 func (ldb *LevelDB) delete(keys [][]byte) {
@@ -122,17 +122,18 @@ func (ldb *LevelDB) Flush() error {
 }
 
 // Has is to determine if a key exists
-func (ldb *LevelDB) Has(key []byte) (bool, byte, bool) {
+func (ldb *LevelDB) Has(key []byte) (bool, byte) {
 	metaKey := encodeMetaKey(key)
-	exist, tipe, expire := ldb.has(metaKey)
+	exist, tipe := ldb.has(metaKey)
 
-	if !exist || !expire {
-		return exist, tipe, expire
+	if !exist {
+		return exist, tipe
 	}
 
 	at := ldb.GetExpireAt(key)
-	if at.After(time.Now()) {
-		return true, tipe, true
+
+	if at == nil || at.After(time.Now()) {
+		return true, tipe
 	}
 
 	switch tipe {
@@ -140,9 +141,11 @@ func (ldb *LevelDB) Has(key []byte) (bool, byte, bool) {
 		ldb.DeleteString(key)
 	case Hash:
 		ldb.DeleteHash(key)
+	case List:
+		ldb.DeleteList(key)
 	}
 
-	return false, tipe, false
+	return false, tipe
 }
 
 // Lock/Unlock functions

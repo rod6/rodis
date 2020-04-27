@@ -17,7 +17,7 @@ type Field struct {
 	Value []byte
 }
 
-// encodeFieldKey encodes hash field key
+// encodeFieldKey encodes hash field key: -Key|Field
 func encodeFieldKey(key []byte, field []byte) []byte {
 	fieldKey := make([]byte, 1 /* '-' */ +len(key)+1 /* '|' */ +len(field))
 	fieldKey[0] = ValuePrefix
@@ -134,11 +134,11 @@ func (ldb *LevelDB) GetFieldsAsArray(key []byte, fields [][]byte) []Field {
 }
 
 // GetHashFieldNames write hash data
-func (ldb *LevelDB) PutHash(key []byte, hash map[string][]byte, expire bool) {
+func (ldb *LevelDB) PutHash(key []byte, tipe byte, hash map[string][]byte) {
 	metaKey := encodeMetaKey(key)
 
 	batch := new(leveldb.Batch)
-	batch.Put(metaKey, encodeMetadata(Hash, expire))
+	batch.Put(metaKey, encodeMetadata(tipe))
 	for k, v := range hash {
 		fieldKey := encodeFieldKey(key, []byte(k))
 		batch.Put(fieldKey, v)

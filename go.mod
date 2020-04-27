@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/BurntSushi/toml v0.3.1
+	github.com/aws/aws-sdk-go v1.30.14
 	github.com/garyburd/redigo v1.6.0
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/libgo/logx v1.0.5
