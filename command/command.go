@@ -97,22 +97,20 @@ var commands = map[string]*attr{
 	"hvals":        {hvals, 2},
 
 	// lists
-	"lindex":  {lindex, 3},
-	"llen":    {llen, 2},
-	"lpop":    {lpop, 2},
-	"lpush":   {lpush, 0},
-	"lpushx":  {lpushx, 0},
-	"rpop":    {rpop, 2},
-	"rpush":   {rpush, 0},
-	"rpushx":  {rpushx, 0},
-	"lrange":  {lrange, 4},
-	"linsert": {linsert, 5},
-	"lset":    {lset, 4},
-	/*
-		"lrem":      {lrem, 0},
-		"ltrim":     {ltrim, 0},
-		"rpoplpush": {rpoplpush, 0},
-	*/
+	"lindex":    {lindex, 3},
+	"linsert":   {linsert, 5},
+	"llen":      {llen, 2},
+	"lpop":      {lpop, 2},
+	"lpush":     {lpush, 0},
+	"lpushx":    {lpushx, 0},
+	"lrange":    {lrange, 4},
+	"lset":      {lset, 4},
+	"ltrim":     {ltrim, 4},
+	"rpop":      {rpop, 2},
+	"rpush":     {rpush, 0},
+	"rpushx":    {rpushx, 0},
+	"lrem":      {lrem, 4},
+	"rpoplpush": {rpoplpush, 3},
 
 	// sets
 	/*

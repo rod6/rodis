@@ -91,6 +91,22 @@ func (ldb *LevelDB) GetListElement(key []byte, i uint32) (uint32, uint32, []byte
 	return next, prev, r[8:]
 }
 
+// DelListElement
+func (ldb *LevelDB) DelListElement(key []byte, i uint32) {
+	next, prev, v := ldb.GetListElement(key, i)
+	ldb.delete([][]byte{encodeListElementKey(key, i)})
+
+	if next == i {
+		return
+	}
+
+	_, prevPrev, v := ldb.GetListElement(key, prev)
+	ldb.PutListElement(key, prev, next, prevPrev, v)
+
+	nextNext, _, v := ldb.GetListElement(key, next)
+	ldb.PutListElement(key, next, nextNext, prev, v)
+}
+
 // SetListElement with index
 func (ldb *LevelDB) SetListElement(key []byte, index int, v []byte) error {
 	length, head, _, _ := ldb.GetListAttr(key)
@@ -152,6 +168,107 @@ func (ldb *LevelDB) GetListRange(key []byte, start int, end int) [][]byte {
 		next, _, v = ldb.GetListElement(key, curr)
 		r = append(r, v)
 	}
+	return r
+}
+
+// TrimList
+func (ldb *LevelDB) TrimList(key []byte, start int, end int) {
+	length, head, tail, counter := ldb.GetListAttr(key)
+
+	l := int(length)
+	if start < 0 {
+		start = l + start
+	}
+	if end < 0 {
+		end = l + end
+	}
+
+	if start < 0 {
+		start = 0
+	}
+	if end < 0 {
+		end = 0
+	}
+	if end >= l {
+		end = l - 1
+	}
+
+	if start >= l || start > end {
+		ldb.DeleteList(key)
+		return
+	}
+
+	trims := [][]byte{}
+	next := head
+	for i := 0; i < start; i++ {
+		trims = append(trims, encodeListElementKey(key, next))
+		next, _, _ = ldb.GetListElement(key, next)
+	}
+
+	newHead := next
+	var v []byte
+	for i := start; i < end; i++ {
+		next, _, _ = ldb.GetListElement(key, next)
+	}
+	newTail := next
+
+	for ; next != tail; next, _, _ = ldb.GetListElement(key, next) {
+		trims = append(trims, encodeListElementKey(key, next))
+	}
+
+	ldb.delete(trims)
+	next, prev, v := ldb.GetListElement(key, newHead)
+	ldb.PutListElement(key, newHead, next, newTail, v)
+	next, prev, v = ldb.GetListElement(key, newTail)
+	ldb.PutListElement(key, newTail, newHead, prev, v)
+	ldb.PutListAttr(key, uint32(end-start+1), newHead, newTail, counter)
+}
+
+// RemList
+func (ldb *LevelDB) RemList(key []byte, count int, value []byte) int {
+	if count == 0 {
+		return 0
+	}
+
+	r := 0
+	length, head, tail, counter := ldb.GetListAttr(key)
+
+	curr := head
+	if count < 0 {
+		curr = tail
+	}
+
+	for access := 0; (access < int(length)) && (r < abs(count)); access++ {
+		next, prev, v := ldb.GetListElement(key, curr)
+
+		// if equal to the value
+		if bytes.Equal(value, v) {
+			r++
+			// empty list, remove meta & attr, return r
+			if r == int(length) {
+				ldb.DeleteList(key)
+				return r
+			}
+
+			// remove the element
+			ldb.DelListElement(key, curr)
+
+			if curr == head {
+				head = next
+			}
+			if curr == tail {
+				tail = prev
+			}
+		}
+
+		if count > 0 {
+			curr = next
+		} else {
+			curr = prev
+		}
+	}
+
+	ldb.PutListAttr(key, length-uint32(r), head, tail, counter)
 	return r
 }
 
@@ -374,4 +491,11 @@ func (ldb *LevelDB) PopListTail(key []byte) []byte {
 func (ldb *LevelDB) GetListLength(key []byte) uint32 {
 	length, _, _, _ := ldb.GetListAttr(key)
 	return length
+}
+
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
 }

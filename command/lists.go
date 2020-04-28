@@ -18,13 +18,21 @@ import (
 //
 // command		status
 // ------------------------
+// BLPOP        TODO
+// BLPOP        TODO
+// BRPOPLPUSH   TODO
 // LINDEX       done
+// LINSERT      done
 // LLEN         done
 // LPOP         done
 // LPUSH        done
 // LPUSHX       done
 // LRANGE       done
+// LREM         done
+// LSET         done
+// LTRIM        done
 // RPOP         done
+// RPOPLPUSH    done
 // RPUSH        done
 // RPUSHX       done
 
@@ -162,72 +170,6 @@ func lpushx(v resp.CommandArgs, ex *Extras) error {
 	return resp.Integer(length).WriteTo(ex.Buffer)
 }
 
-// rpop -> https://redis.io/commands/rpop
-func rpop(v resp.CommandArgs, ex *Extras) error {
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
-
-	exist, tipe := ex.DB.Has(v[0])
-	if !exist {
-		return resp.NilBulkString.WriteTo(ex.Buffer)
-	}
-	if exist && tipe != storage.List {
-		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
-	}
-
-	val := ex.DB.PopListTail(v[0])
-	if len(val) == 0 {
-		return resp.NilBulkString.WriteTo(ex.Buffer)
-	}
-
-	return resp.BulkString(val).WriteTo(ex.Buffer)
-}
-
-// rpush -> https://redis.io/commands/rpush
-func rpush(v resp.CommandArgs, ex *Extras) error {
-	if len(v) < 2 {
-		return resp.NewError(ErrFmtWrongNumberArgument, "rpush").WriteTo(ex.Buffer)
-	}
-
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
-
-	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.List {
-		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
-	}
-
-	var length uint32
-	for _, val := range v[1:] {
-		length = ex.DB.PushListTail(v[0], storage.List, val)
-	}
-	return resp.Integer(length).WriteTo(ex.Buffer)
-}
-
-// rpushx -> https://redis.io/commands/rpushx
-func rpushx(v resp.CommandArgs, ex *Extras) error {
-	if len(v) < 2 {
-		return resp.NewError(ErrFmtWrongNumberArgument, "rpush").WriteTo(ex.Buffer)
-	}
-
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
-
-	exist, tipe := ex.DB.Has(v[0])
-	if !exist {
-		return resp.ZeroInteger.WriteTo(ex.Buffer)
-	}
-	if tipe != storage.List {
-		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
-	}
-
-	var length uint32
-	for _, val := range v[1:] {
-		length = ex.DB.PushListTail(v[0], storage.List, val)
-	}
-	return resp.Integer(length).WriteTo(ex.Buffer)
-}
-
 // lrange -> https://redis.io/commands/lrange
 func lrange(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
@@ -259,6 +201,32 @@ func lrange(v resp.CommandArgs, ex *Extras) error {
 	return arr.WriteTo(ex.Buffer)
 }
 
+// lrem -> https://redis.io/commands/lrem
+func lrem(v resp.CommandArgs, ex *Extras) error {
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	exist, tipe := ex.DB.Has(v[0])
+	if !exist {
+		return resp.ZeroInteger.WriteTo(ex.Buffer)
+	}
+	if exist && tipe != storage.List {
+		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
+	}
+
+	count, err := strconv.Atoi(string(v[1]))
+	if err != nil {
+		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
+	}
+
+	if count == 0 {
+		return resp.ZeroInteger.WriteTo(ex.Buffer)
+	}
+
+	r := ex.DB.RemList(v[0], count, v[2])
+	return resp.Integer(r).WriteTo(ex.Buffer)
+}
+
 // lset -> https://redis.io/commands/lset
 func lset(v resp.CommandArgs, ex *Extras) error {
 	ex.DB.Lock()
@@ -282,4 +250,127 @@ func lset(v resp.CommandArgs, ex *Extras) error {
 		resp.NewError(ErrIndexOutRange).WriteTo(ex.Buffer)
 	}
 	return resp.OkSimpleString.WriteTo(ex.Buffer)
+}
+
+// ltrim -> https://redis.io/commands/ltrim
+func ltrim(v resp.CommandArgs, ex *Extras) error {
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	exist, tipe := ex.DB.Has(v[0])
+	if !exist {
+		return resp.EmptyArray.WriteTo(ex.Buffer)
+	}
+	if exist && tipe != storage.List {
+		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
+	}
+
+	start, err := strconv.Atoi(string(v[1]))
+	if err != nil {
+		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
+	}
+	end, err := strconv.Atoi(string(v[2]))
+	if err != nil {
+		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
+	}
+
+	ex.DB.TrimList(v[0], start, end)
+	return resp.OkSimpleString.WriteTo(ex.Buffer)
+}
+
+// rpop -> https://redis.io/commands/rpop
+func rpop(v resp.CommandArgs, ex *Extras) error {
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	exist, tipe := ex.DB.Has(v[0])
+	if !exist {
+		return resp.NilBulkString.WriteTo(ex.Buffer)
+	}
+	if exist && tipe != storage.List {
+		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
+	}
+
+	val := ex.DB.PopListTail(v[0])
+	if len(val) == 0 {
+		return resp.NilBulkString.WriteTo(ex.Buffer)
+	}
+
+	return resp.BulkString(val).WriteTo(ex.Buffer)
+}
+
+// rpoplpush -> https://redis.io/commands/rpoplpush
+func rpoplpush(v resp.CommandArgs, ex *Extras) error {
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	// check source
+	exist, tipe := ex.DB.Has(v[0])
+	if !exist {
+		return resp.NilBulkString.WriteTo(ex.Buffer)
+	}
+	if exist && tipe != storage.List {
+		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
+	}
+
+	// check dest
+	exist, tipe = ex.DB.Has(v[1])
+	if exist && tipe != storage.List {
+		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
+	}
+
+	// rpop
+	val := ex.DB.PopListTail(v[0])
+	if len(val) == 0 {
+		return resp.NilBulkString.WriteTo(ex.Buffer)
+	}
+	// lpush
+	ex.DB.PushListHead(v[1], storage.List, val)
+
+	return resp.BulkString(val).WriteTo(ex.Buffer)
+}
+
+// rpush -> https://redis.io/commands/rpush
+func rpush(v resp.CommandArgs, ex *Extras) error {
+	if len(v) < 2 {
+		return resp.NewError(ErrFmtWrongNumberArgument, "rpush").WriteTo(ex.Buffer)
+	}
+
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	exist, tipe := ex.DB.Has(v[0])
+	if exist && tipe != storage.List {
+		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
+	}
+
+	var length uint32
+	for _, val := range v[1:] {
+		length = ex.DB.PushListTail(v[0], storage.List, val)
+	}
+	return resp.Integer(length).WriteTo(ex.Buffer)
+}
+
+// rpushx -> https://redis.io/commands/rpushx
+func rpushx(v resp.CommandArgs, ex *Extras) error {
+	if len(v) < 2 {
+		return resp.NewError(ErrFmtWrongNumberArgument, "rpushx").WriteTo(ex.Buffer)
+	}
+
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	exist, tipe := ex.DB.Has(v[0])
+	if !exist {
+		return resp.ZeroInteger.WriteTo(ex.Buffer)
+	}
+	if tipe != storage.List {
+		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
+	}
+
+	var length uint32
+	for _, val := range v[1:] {
+		length = ex.DB.PushListTail(v[0], storage.List, val)
+	}
+	return resp.Integer(length).WriteTo(ex.Buffer)
 }
