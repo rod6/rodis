@@ -133,7 +133,7 @@ func (ldb *LevelDB) GetFieldsAsArray(key []byte, fields [][]byte) []Field {
 	return hash
 }
 
-// GetHashFieldNames write hash data
+// PutHash write hash data
 func (ldb *LevelDB) PutHash(key []byte, tipe byte, hash map[string][]byte) {
 	metaKey := encodeMetaKey(key)
 

@@ -143,6 +143,8 @@ func (ldb *LevelDB) Has(key []byte) (bool, byte) {
 		ldb.DeleteHash(key)
 	case List:
 		ldb.DeleteList(key)
+	case Set:
+		ldb.DeleteHash(key)
 	}
 
 	return false, tipe

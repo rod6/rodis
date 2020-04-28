@@ -35,6 +35,9 @@
 //      -ListKey|0x00000002 -> 0x00000003|0x00000001|item2 (next|prev|value)
 //      -ListKey|0x00000003 -> 0x00000000|0x00000002|item3 (next|prev|value)
 //
+// Set Type:
+//      Using hash as the internal data structure, with the value = []byte{"set"}
+//
 // Expire Hash: to store expire of keys, using time.Unix value
 //      +SYSExpire -> metadata (as hash)
 //      -SYSExpire|rKey -> time.Unix()

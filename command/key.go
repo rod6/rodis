@@ -50,6 +50,8 @@ func del(v resp.CommandArgs, ex *Extras) error {
 			ex.DB.DeleteHash(key)
 		case storage.List:
 			ex.DB.DeleteList(key)
+		case storage.Set:
+			ex.DB.DeleteHash(key)
 		}
 
 		count++
