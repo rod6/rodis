@@ -38,6 +38,11 @@
 // Set Type:
 //      Using hash as the internal data structure, with the value = []byte{"set"}
 //
+// SkipList Type:
+//      +ListKey            -> metadata (2 bytes)
+//      -ListKey|0x00000000 -> attrdata (4 bytes for length + 1 byte for level + 4 bytes for head + 4 bytes for tail + 4 bytes for counter)
+//      -ListKey|0x00000001 -> head ()
+//
 // Expire Hash: to store expire of keys, using time.Unix value
 //      +SYSExpire -> metadata (as hash)
 //      -SYSExpire|rKey -> time.Unix()
