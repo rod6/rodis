@@ -10,31 +10,27 @@ import (
 	"math/rand"
 
 	"github.com/rod6/rodis/resp"
-	"github.com/rod6/rodis/storage"
 )
 
-// Implement for command list in http://redis.io/commands#set
-//
-// command		status
-// ---------------------
-// SADD         done
-// SCARD        done
-// SDIFF        done
-// SDIFFSTORE   done
-// SINTER       done
-// SINTERSTORE  done
-// SISMEMBER    done
-// SMEMBERS     done
-// SMOVE        done
-// SPOP         partly done, no count support
-// SRANDMEMBER  partly done, no count support
-// SREM         done
-// SSCAN        TODO
-// SUNION       done
-// SUNIONSTORE  done
+// command
+// -----------
+// SADD
+// SCARD
+// SDIFF
+// SDIFFSTORE
+// SINTER
+// SINTERSTORE
+// SISMEMBER
+// SMEMBERS
+// SMOVE
+// SPOP         (partly done, no count support)
+// SRANDMEMBER  (partly done, no count support)
+// SREM
+// SUNION
+// SUNIONSTORE
 
 // sadd -> https://redis.io/commands/sadd
-func sadd(v resp.CommandArgs, ex *Extras) error {
+func sadd(v args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sadd").WriteTo(ex.Buffer)
 	}
@@ -43,7 +39,7 @@ func sadd(v resp.CommandArgs, ex *Extras) error {
 	defer ex.DB.Unlock()
 
 	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.Set {
+	if exist && tipe != resp.Set {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -51,22 +47,22 @@ func sadd(v resp.CommandArgs, ex *Extras) error {
 	for _, s := range v[1:] {
 		hash[string(s)] = []byte("set")
 	}
-	ex.DB.PutHash(v[0], storage.Set, hash)
+	ex.DB.PutHash(v[0], resp.Set, hash)
 	// TODO: sadd returns the number that added to the set
 	// Now, we return the number of args, will update later.
 	return resp.Integer(len(v[1:])).WriteTo(ex.Buffer)
 }
 
 // scard -> https://redis.io/commands/scard
-func scard(v resp.CommandArgs, ex *Extras) error {
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
+func scard(v args, ex *Extras) error {
+	ex.DB.RLock()
+	defer ex.DB.RUnlock()
 
 	exist, tipe := ex.DB.Has(v[0])
 	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
-	if tipe != storage.Set {
+	if tipe != resp.Set {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -75,20 +71,20 @@ func scard(v resp.CommandArgs, ex *Extras) error {
 }
 
 // sdiff -> https://redis.io/commands/sdiff
-func sdiff(v resp.CommandArgs, ex *Extras) error {
+func sdiff(v args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sdiff").WriteTo(ex.Buffer)
 	}
 
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
+	ex.DB.RLock()
+	defer ex.DB.RUnlock()
 
 	for i, s := range v {
 		exist, tipe := ex.DB.Has(s)
 		if i == 0 && !exist { // first key not exists, return empty
 			return resp.EmptyArray.WriteTo(ex.Buffer)
 		}
-		if exist && tipe != storage.Set {
+		if exist && tipe != resp.Set {
 			return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 		}
 	}
@@ -108,7 +104,7 @@ func sdiff(v resp.CommandArgs, ex *Extras) error {
 }
 
 // sdiffstore -> https://redis.io/commands/sdiffstore
-func sdiffstore(v resp.CommandArgs, ex *Extras) error {
+func sdiffstore(v args, ex *Extras) error {
 	if len(v) < 3 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sdiffstore").WriteTo(ex.Buffer)
 	}
@@ -121,7 +117,7 @@ func sdiffstore(v resp.CommandArgs, ex *Extras) error {
 		if i == 0 && !exist { // first key not exists, return empty
 			return resp.ZeroInteger.WriteTo(ex.Buffer)
 		}
-		if exist && tipe != storage.Set {
+		if exist && tipe != resp.Set {
 			return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 		}
 	}
@@ -139,26 +135,26 @@ func sdiffstore(v resp.CommandArgs, ex *Extras) error {
 		}
 	}
 	if len(set0) > 0 {
-		ex.DB.PutHash(v[0], storage.Set, set0)
+		ex.DB.PutHash(v[0], resp.Set, set0)
 	}
 	return resp.Integer(len(set0)).WriteTo(ex.Buffer)
 }
 
 // sinter -> https://redis.io/commands/sinter
-func sinter(v resp.CommandArgs, ex *Extras) error {
+func sinter(v args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sinter").WriteTo(ex.Buffer)
 	}
 
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
+	ex.DB.RLock()
+	defer ex.DB.RUnlock()
 
 	for _, s := range v {
 		exist, tipe := ex.DB.Has(s)
 		if !exist { // first key not exists, return empty
 			return resp.EmptyArray.WriteTo(ex.Buffer)
 		}
-		if tipe != storage.Set {
+		if tipe != resp.Set {
 			return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 		}
 	}
@@ -182,7 +178,7 @@ func sinter(v resp.CommandArgs, ex *Extras) error {
 }
 
 // sinterstore -> https://redis.io/commands/sinterstore
-func sinterstore(v resp.CommandArgs, ex *Extras) error {
+func sinterstore(v args, ex *Extras) error {
 	if len(v) < 3 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sinterstore").WriteTo(ex.Buffer)
 	}
@@ -195,7 +191,7 @@ func sinterstore(v resp.CommandArgs, ex *Extras) error {
 		if i == 0 && !exist { // first key not exists, return empty
 			return resp.ZeroInteger.WriteTo(ex.Buffer)
 		}
-		if exist && tipe != storage.Set {
+		if exist && tipe != resp.Set {
 			return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 		}
 	}
@@ -217,21 +213,21 @@ func sinterstore(v resp.CommandArgs, ex *Extras) error {
 	}
 
 	if len(set0) > 0 {
-		ex.DB.PutHash(v[0], storage.Set, set0)
+		ex.DB.PutHash(v[0], resp.Set, set0)
 	}
 	return resp.Integer(len(set0)).WriteTo(ex.Buffer)
 }
 
 // sismember -> https://redis.io/commands/sismember
-func sismember(v resp.CommandArgs, ex *Extras) error {
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
+func sismember(v args, ex *Extras) error {
+	ex.DB.RLock()
+	defer ex.DB.RUnlock()
 
 	exist, tipe := ex.DB.Has(v[0])
 	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
-	if exist && tipe != storage.Set {
+	if exist && tipe != resp.Set {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -243,15 +239,15 @@ func sismember(v resp.CommandArgs, ex *Extras) error {
 }
 
 // smembers -> https://redis.io/commands/smembers
-func smembers(v resp.CommandArgs, ex *Extras) error {
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
+func smembers(v args, ex *Extras) error {
+	ex.DB.RLock()
+	defer ex.DB.RUnlock()
 
 	exist, tipe := ex.DB.Has(v[0])
 	if !exist {
 		return resp.EmptyArray.WriteTo(ex.Buffer)
 	}
-	if tipe != storage.Set {
+	if tipe != resp.Set {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -265,7 +261,7 @@ func smembers(v resp.CommandArgs, ex *Extras) error {
 }
 
 // smove -> https://redis.io/commands/smove
-func smove(v resp.CommandArgs, ex *Extras) error {
+func smove(v args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -273,11 +269,11 @@ func smove(v resp.CommandArgs, ex *Extras) error {
 	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
-	if tipe != storage.Set {
+	if tipe != resp.Set {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 	exist, tipe = ex.DB.Has(v[1])
-	if exist && tipe != storage.Set {
+	if exist && tipe != resp.Set {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -287,12 +283,12 @@ func smove(v resp.CommandArgs, ex *Extras) error {
 	}
 	ex.DB.DeleteFields(v[0], [][]byte{v[2]})
 
-	ex.DB.PutHash(v[1], storage.Set, hash)
+	ex.DB.PutHash(v[1], resp.Set, hash)
 	return resp.OneInteger.WriteTo(ex.Buffer)
 }
 
 // spop -> https://redis.io/commands/spop
-func spop(v resp.CommandArgs, ex *Extras) error {
+func spop(v args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -300,7 +296,7 @@ func spop(v resp.CommandArgs, ex *Extras) error {
 	if !exist {
 		return resp.EmptyArray.WriteTo(ex.Buffer)
 	}
-	if tipe != storage.Set {
+	if tipe != resp.Set {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -312,15 +308,15 @@ func spop(v resp.CommandArgs, ex *Extras) error {
 }
 
 // srandmember -> https://redis.io/commands/srandmember
-func srandmember(v resp.CommandArgs, ex *Extras) error {
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
+func srandmember(v args, ex *Extras) error {
+	ex.DB.RLock()
+	defer ex.DB.RUnlock()
 
 	exist, tipe := ex.DB.Has(v[0])
 	if !exist {
 		return resp.EmptyArray.WriteTo(ex.Buffer)
 	}
-	if tipe != storage.Set {
+	if tipe != resp.Set {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -331,7 +327,7 @@ func srandmember(v resp.CommandArgs, ex *Extras) error {
 }
 
 // srem -> https://redis.io/commands/srem
-func srem(v resp.CommandArgs, ex *Extras) error {
+func srem(v args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "srem").WriteTo(ex.Buffer)
 	}
@@ -343,7 +339,7 @@ func srem(v resp.CommandArgs, ex *Extras) error {
 	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
-	if tipe != storage.Set {
+	if tipe != resp.Set {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -364,17 +360,17 @@ func srem(v resp.CommandArgs, ex *Extras) error {
 }
 
 // sunion -> https://redis.io/commands/sunion
-func sunion(v resp.CommandArgs, ex *Extras) error {
+func sunion(v args, ex *Extras) error {
 	if len(v) < 1 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sunion").WriteTo(ex.Buffer)
 	}
 
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
+	ex.DB.RLock()
+	defer ex.DB.RUnlock()
 
 	for _, s := range v {
 		exist, tipe := ex.DB.Has(s)
-		if exist && tipe != storage.Set {
+		if exist && tipe != resp.Set {
 			return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 		}
 	}
@@ -396,7 +392,7 @@ func sunion(v resp.CommandArgs, ex *Extras) error {
 }
 
 // sunionstore -> https://redis.io/commands/sunionstore
-func sunionstore(v resp.CommandArgs, ex *Extras) error {
+func sunionstore(v args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sunionstore").WriteTo(ex.Buffer)
 	}
@@ -406,7 +402,7 @@ func sunionstore(v resp.CommandArgs, ex *Extras) error {
 
 	for _, s := range v[1:] {
 		exist, tipe := ex.DB.Has(s)
-		if exist && tipe != storage.Set {
+		if exist && tipe != resp.Set {
 			return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 		}
 	}
@@ -426,7 +422,7 @@ func sunionstore(v resp.CommandArgs, ex *Extras) error {
 	}
 
 	if len(set0) > 0 {
-		ex.DB.PutHash(v[0], storage.Set, set0)
+		ex.DB.PutHash(v[0], resp.Set, set0)
 	}
 	return resp.Integer(len(set0)).WriteTo(ex.Buffer)
 }

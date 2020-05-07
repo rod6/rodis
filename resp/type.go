@@ -12,6 +12,7 @@ import (
 
 type RESPType int
 
+// RESP types
 const (
 	WrongType = iota // wrong input
 	SimpleStringType
@@ -21,6 +22,7 @@ const (
 	ArrayType
 )
 
+// Value interface: WriteTo
 type Value interface {
 	WriteTo(*bytes.Buffer) error
 }
@@ -28,38 +30,37 @@ type Value interface {
 // RESP SimpleString
 type SimpleString string
 
-const OkSimpleString = SimpleString("OK")
-const PongSimpleString = SimpleString("PONG")
-
 func (s SimpleString) WriteTo(w *bytes.Buffer) error {
 	_, err := fmt.Fprintf(w, "+%s\r\n", s)
 	return err
 }
 
+// String
 func (s SimpleString) String() string {
 	return string(s)
 }
 
+// OkSimpleString & PongSimpleString
+const OkSimpleString = SimpleString("OK")
+const PongSimpleString = SimpleString("PONG")
+
 // RESP Integer
 type Integer int64
-
-const (
-	ZeroInteger        = Integer(0)
-	OneInteger         = Integer(1)
-	NegativeOneInteger = Integer(-1)
-)
 
 func (i Integer) WriteTo(w *bytes.Buffer) error {
 	_, err := fmt.Fprintf(w, ":%d\r\n", i)
 	return err
 }
 
+// Three const integer: 0, 1, -1
+const (
+	ZeroInteger        = Integer(0)
+	OneInteger         = Integer(1)
+	NegativeOneInteger = Integer(-1)
+)
+
 // RESP Error
 type Error string
-
-func NewError(format string, v ...interface{}) Error {
-	return Error(fmt.Sprintf(format, v...))
-}
 
 func (e Error) Error() string {
 	return string(e)
@@ -70,13 +71,13 @@ func (e Error) WriteTo(w *bytes.Buffer) error {
 	return err
 }
 
-// RESP Bulk String
-type BulkString []byte
+// NewError generates RESP Error
+func NewError(format string, v ...interface{}) Error {
+	return Error(fmt.Sprintf(format, v...))
+}
 
-var (
-	NilBulkString   = BulkString(nil)
-	EmptyBulkString = BulkString([]byte(""))
-)
+// RESP BulkString
+type BulkString []byte
 
 func (b BulkString) WriteTo(w *bytes.Buffer) error {
 	if b == nil {
@@ -102,11 +103,18 @@ func (b BulkString) String() string {
 	return string(b)
 }
 
+var (
+	NilBulkString   = BulkString(nil)
+	EmptyBulkString = BulkString([]byte(""))
+)
+
 // RESP Array
 type Array []Value
 
+// EmptyArray
 var EmptyArray = Array{}
 
+// WriteTo buffer
 func (a Array) WriteTo(w *bytes.Buffer) error {
 	if a == nil {
 		_, err := fmt.Fprintf(w, "*-1\r\n")
@@ -124,22 +132,4 @@ func (a Array) WriteTo(w *bytes.Buffer) error {
 	}
 
 	return nil
-}
-
-type CommandArgs []BulkString
-
-func (a Array) ToArgs() CommandArgs {
-	c := make(CommandArgs, len(a))
-	for i, v := range a {
-		c[i] = v.(BulkString)
-	}
-	return c
-}
-
-func (args CommandArgs) ToBytes() [][]byte {
-	c := make([][]byte, len(args))
-	for i, v := range args {
-		c[i] = v
-	}
-	return c
 }

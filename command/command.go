@@ -16,6 +16,9 @@ import (
 	"github.com/rod6/rodis/storage"
 )
 
+// args: Command Args
+type args []resp.BulkString
+
 type Extras struct {
 	DB       *storage.LevelDB
 	Buffer   *bytes.Buffer
@@ -23,8 +26,10 @@ type Extras struct {
 	Password string
 }
 
-// command handle function
-type commandFunc func(v resp.CommandArgs, ex *Extras) error
+// commandFunc is handle function
+// args: the args from client
+// Extras: extra information
+type commandFunc func(v args, ex *Extras) error
 
 // command map attr struct
 type attr struct {
@@ -154,7 +159,10 @@ func Handle(v resp.Array, ex *Extras) error {
 		return resp.NewError(ErrFmtNoCommand).WriteTo(ex.Buffer)
 	}
 
-	args := v.ToArgs()
+	args := make(args, 0)
+	for _, e := range v {
+		args = append(args, e.(resp.BulkString))
+	}
 
 	cmd := strings.ToLower(args[0].String())
 	a, err := findCmdFunc(cmd)
@@ -162,7 +170,8 @@ func Handle(v resp.Array, ex *Extras) error {
 		return resp.NewError(ErrFmtUnknownCommand, cmd).WriteTo(ex.Buffer)
 	}
 
-	if a.c != 0 && len(v) != a.c { //a.c = 0 means to check the number in f
+	//a.c = 0 means to check the number in f
+	if a.c != 0 && len(v) != a.c {
 		return resp.NewError(ErrFmtWrongNumberArgument, cmd).WriteTo(ex.Buffer)
 	}
 
@@ -170,15 +179,8 @@ func Handle(v resp.Array, ex *Extras) error {
 		return resp.NewError(ErrAuthed).WriteTo(ex.Buffer)
 	}
 
+	// call command handler
 	return a.f(args[1:], ex)
-}
-
-func humanArgs(args resp.CommandArgs) string {
-	s := ""
-	for _, a := range args {
-		s = s + ` '` + a.String() + `'`
-	}
-	return s
 }
 
 const (

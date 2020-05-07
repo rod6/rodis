@@ -4,12 +4,12 @@
 // Use of this source code is governed by The MIT License.
 
 // RESP(REdis Serialization Protocol) is used for the communication between redis client and server.
-//    RESP can serialize different data types like integers, strings, arrays. There is also a specific
-//    type for errors. Requests are sent from the client to the Redis server as arrays of strings
-//    representing the arguments of the command to execute. Redis replies with a command-specific data type.
+//  RESP can serialize different data types like integers, strings, arrays. There is also a specific
+//  type for errors. Requests are sent from the client to the Redis server as arrays of strings
+//  representing the arguments of the command to execute. Redis replies with a command-specific data type.
 //
-//    RESP is binary-safe and does not require processing of bulk data transferred from one process to another,
-//    because it uses prefixed-length to transfer bulk data.
+//  RESP is binary-safe and does not require processing of bulk data transferred from one process to
+//  another, because it uses prefixed-length to transfer bulk data.
 //
 // Detail description of RESP can be found at: http://redis.io/topics/protocol
 // This package is to parse RESP.

@@ -13,8 +13,16 @@ import (
 	"github.com/rod6/rodis/storage"
 )
 
-//auth: https://redis.io/commands/auth
-func auth(v resp.CommandArgs, ex *Extras) error {
+// command
+// -------
+// AUTH
+// ECHO
+// FLUSHDB
+// PING
+// SELECT
+
+// auth: https://redis.io/commands/auth
+func auth(v args, ex *Extras) error {
 	if ex.Password == "" {
 		return resp.NewError(ErrNoNeedPassword).WriteTo(ex.Buffer)
 	}
@@ -26,18 +34,29 @@ func auth(v resp.CommandArgs, ex *Extras) error {
 	return resp.OkSimpleString.WriteTo(ex.Buffer)
 }
 
-//echo: https://redis.io/commands/echo
-func echo(v resp.CommandArgs, ex *Extras) error {
+// echo: https://redis.io/commands/echo
+func echo(v args, ex *Extras) error {
 	return v[0].WriteTo(ex.Buffer)
 }
 
-//ping: https://redis.io/commands/ping
-func ping(v resp.CommandArgs, ex *Extras) error {
+// ping: https://redis.io/commands/ping
+func ping(v args, ex *Extras) error {
 	return resp.PongSimpleString.WriteTo(ex.Buffer)
 }
 
-//selectdb: https://redis.io/commands/select
-func selectdb(v resp.CommandArgs, ex *Extras) error {
+// flushdb: https://redis.io/commands/flushdb
+func flushdb(v args, ex *Extras) error {
+	ex.DB.Lock()
+	defer ex.DB.Unlock()
+
+	if err := ex.DB.Flush(); err != nil {
+		return err
+	}
+	return resp.OkSimpleString.WriteTo(ex.Buffer)
+}
+
+// selectdb: https://redis.io/commands/select
+func selectdb(v args, ex *Extras) error {
 	s := v[0].String()
 	index, err := strconv.Atoi(s)
 	if err != nil {

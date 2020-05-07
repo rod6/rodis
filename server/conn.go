@@ -33,7 +33,13 @@ type rodisConn struct {
 
 func newConnection(conn net.Conn, rs *rodisServer) {
 	uuid := uuid.New()
-	rc := &rodisConn{uuid: uuid, db: storage.Select(0), conn: conn, reader: bufio.NewReader(conn), server: rs}
+	rc := &rodisConn{
+		uuid:   uuid,
+		db:     storage.Select(0),
+		conn:   conn,
+		reader: bufio.NewReader(conn),
+		server: rs,
+	}
 
 	if rs.cfg.RequirePass == "" {
 		rc.authed = true
@@ -71,7 +77,7 @@ func (rc *rodisConn) handle() {
 				rc.close()
 				return
 			} else {
-				logx.Warnf("Connection %v error: %v", rc.uuid, err)
+				logx.Errorf("Connection %v error: %v", rc.uuid, err)
 				continue // Other error, should continue the connection
 			}
 		}

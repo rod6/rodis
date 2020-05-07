@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/rod6/rodis/resp"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
@@ -69,7 +70,7 @@ func (ldb *LevelDB) has(metaKey []byte) (bool, byte) {
 	}
 
 	if err == leveldb.ErrNotFound {
-		return false, None
+		return false, resp.None
 	}
 
 	tipe, err := parseMetadata(metadata)
@@ -137,14 +138,16 @@ func (ldb *LevelDB) Has(key []byte) (bool, byte) {
 	}
 
 	switch tipe {
-	case String:
+	case resp.String:
 		ldb.DeleteString(key)
-	case Hash:
+	case resp.Hash:
 		ldb.DeleteHash(key)
-	case List:
+	case resp.List:
 		ldb.DeleteList(key)
-	case Set:
+	case resp.Set:
 		ldb.DeleteHash(key)
+	case resp.SortedSet:
+		ldb.DeleteSkip(key)
 	}
 
 	return false, tipe

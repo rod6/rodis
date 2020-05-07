@@ -13,7 +13,6 @@ import (
 	"syscall"
 
 	"github.com/libgo/logx"
-	"github.com/rod6/rodis/config"
 	"github.com/rod6/rodis/server"
 	"github.com/rod6/rodis/storage"
 )
@@ -29,17 +28,17 @@ func main() {
 		Level:    logx.InfoLevel,
 		Filename: "rodis.log"}), logx.StdWriter(logx.StdConfig{Level: logx.DebugLevel}))
 
-	if err := config.LoadConfig(*configFile); err != nil {
+	if err := server.LoadConfig(*configFile); err != nil {
 		logx.Fatalf("Load/Parse config file error: %v", err)
 	}
 
-	err := storage.Open(config.Config.LevelDBPath, config.Config.LevelDB)
+	err := storage.Open(server.Config.LevelDBPath, server.Config.LevelDB)
 	if err != nil {
 		logx.Fatalf("Open storage error: %v", err)
 	}
 	defer storage.Close()
 
-	rs, err := server.New(config.Config)
+	rs, err := server.New(server.Config)
 	if err != nil {
 		logx.Fatalf("New server error: %v", err)
 	}

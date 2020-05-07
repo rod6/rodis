@@ -10,11 +10,10 @@ import (
 	"sync"
 
 	"github.com/libgo/logx"
-	"github.com/rod6/rodis/config"
 )
 
 type rodisServer struct {
-	cfg      *config.RodisConfig
+	cfg      *ServerConfig
 	listener net.Listener
 	conns    map[string]*rodisConn
 	mu       sync.Mutex
@@ -22,7 +21,7 @@ type rodisServer struct {
 	quit     chan bool
 }
 
-func New(config config.RodisConfig) (*rodisServer, error) {
+func New(config ServerConfig) (*rodisServer, error) {
 	return &rodisServer{cfg: &config, conns: make(map[string]*rodisConn), quit: make(chan bool)}, nil
 }
 

@@ -12,47 +12,44 @@ import (
 	"time"
 
 	"github.com/rod6/rodis/resp"
-	"github.com/rod6/rodis/storage"
 )
 
-// Implement for command list in http://redis.io/commands#string
-//
-// command		status
-// ---------------------
-// APPEND		done
-// BITCOUNT		done
+// command
+// ------------
+// APPEND
+// BITCOUNT
 // BITFIELD     TODO
-// BITOP		done
-// BITPOS		done
-// DECR			done
-// DECRBY		done
-// GET			done
-// GETBIT		done
-// GETRANGE		done
-// GETSET		done
-// INCR			done
-// INCRBY		done
-// INCRBYFLOAT	done
-// MGET			done
-// MSET			done
-// MSETNX		done
-// PSETEX		done
-// SET			done
-// SETBIT		done
-// SETEX		done
-// SETNX		done
-// SETRANGE		done
-// STRLEN		done
+// BITOP
+// BITPOS
+// DECR
+// DECRBY
+// GET
+// GETBIT
+// GETRANGE
+// GETSET
+// INCR
+// INCRBY
+// INCRBYFLOAT
+// MGET
+// MSET
+// MSETNX
+// PSETEX
+// SET
+// SETBIT
+// SETEX
+// SETNX
+// SETRANGE
+// STRLEN
 
 const STRLIMIT = 536870912 // 512M
 
 // appendx -> https://redis.io/commands/append
-func appendx(v resp.CommandArgs, ex *Extras) error {
+func appendx(v args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
 	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.String {
+	if exist && tipe != resp.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -70,7 +67,7 @@ func appendx(v resp.CommandArgs, ex *Extras) error {
 }
 
 // bitcount -> https://redis.io/commands/bitcount
-func bitcount(v resp.CommandArgs, ex *Extras) error {
+func bitcount(v args, ex *Extras) error {
 	if len(v) == 0 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "bitcount").WriteTo(ex.Buffer)
 	}
@@ -82,7 +79,7 @@ func bitcount(v resp.CommandArgs, ex *Extras) error {
 	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
-	if tipe != storage.String {
+	if tipe != resp.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -122,7 +119,7 @@ func bitcount(v resp.CommandArgs, ex *Extras) error {
 }
 
 // bitop -> https://redis.io/commands/bitop
-func bitop(v resp.CommandArgs, ex *Extras) error {
+func bitop(v args, ex *Extras) error {
 	if len(v) < 3 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "bitop").WriteTo(ex.Buffer)
 	}
@@ -141,7 +138,7 @@ func bitop(v resp.CommandArgs, ex *Extras) error {
 		if !exist {
 			return resp.ZeroInteger.WriteTo(ex.Buffer)
 		}
-		if exist && tipe != storage.String {
+		if exist && tipe != resp.String {
 			return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 		}
 
@@ -158,7 +155,7 @@ func bitop(v resp.CommandArgs, ex *Extras) error {
 		var destValue []byte = nil
 		for _, b := range v[2:] {
 			exist, tipe := ex.DB.Has(b)
-			if exist && tipe != storage.String {
+			if exist && tipe != resp.String {
 				return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 			}
 			val := ex.DB.GetString(b)
@@ -194,7 +191,7 @@ func bitop(v resp.CommandArgs, ex *Extras) error {
 }
 
 // bitpos -> https://redis.io/commands/bitpos
-func bitpos(v resp.CommandArgs, ex *Extras) error {
+func bitpos(v args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "bitpos").WriteTo(ex.Buffer)
 	}
@@ -211,7 +208,7 @@ func bitpos(v resp.CommandArgs, ex *Extras) error {
 	defer ex.DB.RUnlock()
 
 	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.String {
+	if exist && tipe != resp.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -300,12 +297,12 @@ func bitpos(v resp.CommandArgs, ex *Extras) error {
 }
 
 // decr -> https://redis.io/commands/decr
-func decr(v resp.CommandArgs, ex *Extras) error {
+func decr(v args, ex *Extras) error {
 	return incrdecrHelper(v, ex, -1)
 }
 
 // decrby -> https://redis.io/commands/decrby
-func decrby(v resp.CommandArgs, ex *Extras) error {
+func decrby(v args, ex *Extras) error {
 	by, err := strconv.ParseInt(v[1].String(), 10, 64)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -314,7 +311,7 @@ func decrby(v resp.CommandArgs, ex *Extras) error {
 }
 
 // get -> https://redis.io/commands/get
-func get(v resp.CommandArgs, ex *Extras) error {
+func get(v args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -322,7 +319,7 @@ func get(v resp.CommandArgs, ex *Extras) error {
 	if !exist {
 		return resp.NilBulkString.WriteTo(ex.Buffer)
 	}
-	if tipe != storage.String {
+	if tipe != resp.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 	val := ex.DB.GetString(v[0])
@@ -330,7 +327,7 @@ func get(v resp.CommandArgs, ex *Extras) error {
 }
 
 // getbit -> https://redis.io/commands/getbit
-func getbit(v resp.CommandArgs, ex *Extras) error {
+func getbit(v args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -338,7 +335,7 @@ func getbit(v resp.CommandArgs, ex *Extras) error {
 	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
-	if tipe != storage.String {
+	if tipe != resp.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -361,7 +358,7 @@ func getbit(v resp.CommandArgs, ex *Extras) error {
 }
 
 // getrange -> https://redis.io/commands/getrange
-func getrange(v resp.CommandArgs, ex *Extras) error {
+func getrange(v args, ex *Extras) error {
 	start, err := strconv.Atoi(string(v[1]))
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -379,7 +376,7 @@ func getrange(v resp.CommandArgs, ex *Extras) error {
 	if !exist {
 		return resp.EmptyBulkString.WriteTo(ex.Buffer)
 	}
-	if tipe != storage.String {
+	if tipe != resp.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -393,7 +390,7 @@ func getrange(v resp.CommandArgs, ex *Extras) error {
 }
 
 // getset -> https://redis.io/commands/getset
-func getset(v resp.CommandArgs, ex *Extras) error {
+func getset(v args, ex *Extras) error {
 	if len(v[1]) > STRLIMIT {
 		return resp.NewError(ErrStringExccedLimit).WriteTo(ex.Buffer)
 	}
@@ -402,7 +399,7 @@ func getset(v resp.CommandArgs, ex *Extras) error {
 	defer ex.DB.Unlock()
 
 	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.String {
+	if exist && tipe != resp.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 	var oldValue []byte
@@ -419,12 +416,12 @@ func getset(v resp.CommandArgs, ex *Extras) error {
 }
 
 // incr -> https://redis.io/commands/incr
-func incr(v resp.CommandArgs, ex *Extras) error {
+func incr(v args, ex *Extras) error {
 	return incrdecrHelper(v, ex, 1)
 }
 
 // incrby -> https://redis.io/commands/incrby
-func incrby(v resp.CommandArgs, ex *Extras) error {
+func incrby(v args, ex *Extras) error {
 	by, err := strconv.ParseInt(v[1].String(), 10, 64)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -433,7 +430,7 @@ func incrby(v resp.CommandArgs, ex *Extras) error {
 }
 
 // incrbyfloat -> https://redis.io/commands/incrbyfloat
-func incrbyfloat(v resp.CommandArgs, ex *Extras) error {
+func incrbyfloat(v args, ex *Extras) error {
 	by, err := strconv.ParseFloat(v[1].String(), 64)
 	if err != nil {
 		return resp.NewError(ErrNotValidFloat).WriteTo(ex.Buffer)
@@ -443,7 +440,7 @@ func incrbyfloat(v resp.CommandArgs, ex *Extras) error {
 	defer ex.DB.Unlock()
 
 	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.String {
+	if exist && tipe != resp.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -465,7 +462,7 @@ func incrbyfloat(v resp.CommandArgs, ex *Extras) error {
 }
 
 // mget -> https://redis.io/commands/mget
-func mget(v resp.CommandArgs, ex *Extras) error {
+func mget(v args, ex *Extras) error {
 	if len(v) < 1 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "mget").WriteTo(ex.Buffer)
 	}
@@ -476,7 +473,7 @@ func mget(v resp.CommandArgs, ex *Extras) error {
 	arr := make(resp.Array, len(v))
 	for i, g := range v {
 		exist, tipe := ex.DB.Has(g)
-		if !exist || tipe != storage.String {
+		if !exist || tipe != resp.String {
 			arr[i] = resp.NilBulkString
 		} else {
 			val := ex.DB.GetString(g)
@@ -488,7 +485,7 @@ func mget(v resp.CommandArgs, ex *Extras) error {
 }
 
 // mset -> https://redis.io/commands/mset
-func mset(v resp.CommandArgs, ex *Extras) error {
+func mset(v args, ex *Extras) error {
 	if len(v) == 0 || len(v)%2 != 0 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "mset").WriteTo(ex.Buffer)
 	}
@@ -505,7 +502,7 @@ func mset(v resp.CommandArgs, ex *Extras) error {
 }
 
 // msetnx -> https://redis.io/commands/msetnx
-func msetnx(v resp.CommandArgs, ex *Extras) error {
+func msetnx(v args, ex *Extras) error {
 	if len(v) == 0 || len(v)%2 != 0 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "msetnx").WriteTo(ex.Buffer)
 	}
@@ -530,7 +527,7 @@ func msetnx(v resp.CommandArgs, ex *Extras) error {
 }
 
 // psetex -> https://redis.io/commands/psetex
-func psetex(v resp.CommandArgs, ex *Extras) error {
+func psetex(v args, ex *Extras) error {
 	expire, err := strconv.ParseInt(string(v[1]), 10, 32)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -548,7 +545,7 @@ func psetex(v resp.CommandArgs, ex *Extras) error {
 }
 
 // set -> https://redis.io/commands/set
-func set(v resp.CommandArgs, ex *Extras) error {
+func set(v args, ex *Extras) error {
 	if len(v) <= 1 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "set").WriteTo(ex.Buffer)
 	}
@@ -630,7 +627,7 @@ func set(v resp.CommandArgs, ex *Extras) error {
 }
 
 // setbit -> https://redis.io/commands/setbit
-func setbit(v resp.CommandArgs, ex *Extras) error {
+func setbit(v args, ex *Extras) error {
 	i64, err := strconv.ParseInt(string(v[1]), 10, 32)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -652,7 +649,7 @@ func setbit(v resp.CommandArgs, ex *Extras) error {
 	defer ex.DB.Unlock()
 
 	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.String {
+	if exist && tipe != resp.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -681,7 +678,7 @@ func setbit(v resp.CommandArgs, ex *Extras) error {
 }
 
 // setex -> https://redis.io/commands/setex
-func setex(v resp.CommandArgs, ex *Extras) error {
+func setex(v args, ex *Extras) error {
 	expire, err := strconv.ParseInt(string(v[1]), 10, 32)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -699,7 +696,7 @@ func setex(v resp.CommandArgs, ex *Extras) error {
 }
 
 // setnx -> https://redis.io/commands/setnx
-func setnx(v resp.CommandArgs, ex *Extras) error {
+func setnx(v args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -714,7 +711,7 @@ func setnx(v resp.CommandArgs, ex *Extras) error {
 }
 
 // setrange -> https://redis.io/commands/setrange
-func setrange(v resp.CommandArgs, ex *Extras) error {
+func setrange(v args, ex *Extras) error {
 	i64, err := strconv.ParseInt(string(v[1]), 10, 32)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -731,7 +728,7 @@ func setrange(v resp.CommandArgs, ex *Extras) error {
 	defer ex.DB.Unlock()
 
 	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.String {
+	if exist && tipe != resp.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -750,7 +747,7 @@ func setrange(v resp.CommandArgs, ex *Extras) error {
 }
 
 // strlen -> https://redis.io/commands/strlen
-func strlen(v resp.CommandArgs, ex *Extras) error {
+func strlen(v args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -758,7 +755,7 @@ func strlen(v resp.CommandArgs, ex *Extras) error {
 	if !exist {
 		return resp.ZeroInteger.WriteTo(ex.Buffer)
 	}
-	if tipe != storage.String {
+	if tipe != resp.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -848,12 +845,12 @@ func calcRange(start, end, len int) (int, int) {
 	return start, end
 }
 
-func incrdecrHelper(v resp.CommandArgs, ex *Extras, by int64) error {
+func incrdecrHelper(v args, ex *Extras, by int64) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
 	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.String {
+	if exist && tipe != resp.String {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 

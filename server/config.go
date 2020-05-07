@@ -3,14 +3,14 @@
 //
 // Use of this source code is governed by The MIT License.
 
-package config
+package server
 
 import (
 	"github.com/BurntSushi/toml"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
-type RodisConfig struct {
+type ServerConfig struct {
 	App     string
 	Version float32
 	Owner   string
@@ -24,7 +24,7 @@ type RodisConfig struct {
 	LevelDB     *opt.Options
 }
 
-var Config RodisConfig
+var Config ServerConfig
 
 func LoadConfig(path string) error {
 	if _, err := toml.DecodeFile(path, &Config); err != nil {

@@ -11,25 +11,22 @@ import (
 	"time"
 
 	"github.com/rod6/rodis/resp"
-	"github.com/rod6/rodis/storage"
 )
 
-// Implement for following commands
-//
-// command		status
-// ---------------------
-// DEL          done
-// EXIST        done
-// EXPIRE       done
-// EXPIREAT     done
-// PEXPIRE      done
-// PEXPIREAT    done
-// PTTL         done
-// TTL          done
-// TYPE         done
+// command
+// --------
+// DEL
+// EXIST
+// EXPIRE
+// EXPIREAT
+// PEXPIRE
+// PEXPIREAT
+// PTTL
+// TTL
+// TYPE
 
-// del => https://redis.io/commands/del
-func del(v resp.CommandArgs, ex *Extras) error {
+// del -> https://redis.io/commands/del
+func del(v args, ex *Extras) error {
 	if len(v) == 0 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "del").WriteTo(ex.Buffer)
 	}
@@ -44,14 +41,16 @@ func del(v resp.CommandArgs, ex *Extras) error {
 			continue
 		}
 		switch tipe {
-		case storage.String:
+		case resp.String:
 			ex.DB.DeleteString(key)
-		case storage.Hash:
+		case resp.Hash:
 			ex.DB.DeleteHash(key)
-		case storage.List:
+		case resp.List:
 			ex.DB.DeleteList(key)
-		case storage.Set:
+		case resp.Set:
 			ex.DB.DeleteHash(key)
+		case resp.SortedSet:
+			ex.DB.DeleteSkip(key)
 		}
 
 		count++
@@ -60,7 +59,7 @@ func del(v resp.CommandArgs, ex *Extras) error {
 }
 
 // exists -> https://redis.io/commands/exists
-func exists(v resp.CommandArgs, ex *Extras) error {
+func exists(v args, ex *Extras) error {
 	if len(v) == 0 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "exists").WriteTo(ex.Buffer)
 	}
@@ -80,7 +79,7 @@ func exists(v resp.CommandArgs, ex *Extras) error {
 }
 
 // expire -> https://redis.io/commands/expire
-func expire(v resp.CommandArgs, ex *Extras) error {
+func expire(v args, ex *Extras) error {
 	expire, err := strconv.ParseInt(string(v[1]), 10, 32)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -102,7 +101,7 @@ func expire(v resp.CommandArgs, ex *Extras) error {
 }
 
 // expireat -> https://redis.io/commands/expireat
-func expireat(v resp.CommandArgs, ex *Extras) error {
+func expireat(v args, ex *Extras) error {
 	expireat, err := strconv.ParseInt(string(v[1]), 10, 64)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -124,7 +123,7 @@ func expireat(v resp.CommandArgs, ex *Extras) error {
 }
 
 // pexpire -> https://redis.io/commands/pexpire
-func pexpire(v resp.CommandArgs, ex *Extras) error {
+func pexpire(v args, ex *Extras) error {
 	pexpire, err := strconv.ParseInt(string(v[1]), 10, 32)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -146,7 +145,7 @@ func pexpire(v resp.CommandArgs, ex *Extras) error {
 }
 
 // pexpireat -> https://redis.io/commands/expireat
-func pexpireat(v resp.CommandArgs, ex *Extras) error {
+func pexpireat(v args, ex *Extras) error {
 	pexpireat, err := strconv.ParseInt(string(v[1]), 10, 64)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -168,7 +167,7 @@ func pexpireat(v resp.CommandArgs, ex *Extras) error {
 }
 
 // pttl -> https://redis.io/commands/pttl
-func pttl(v resp.CommandArgs, ex *Extras) error {
+func pttl(v args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -189,7 +188,7 @@ func pttl(v resp.CommandArgs, ex *Extras) error {
 }
 
 // ttl -> https://redis.io/commands/ttl
-func ttl(v resp.CommandArgs, ex *Extras) error {
+func ttl(v args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -210,14 +209,14 @@ func ttl(v resp.CommandArgs, ex *Extras) error {
 }
 
 // tipe -> https://redis.io/commands/type
-func tipe(v resp.CommandArgs, ex *Extras) error {
+func tipe(v args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
 	exist, tipe := ex.DB.Has(v[0])
 
 	if !exist {
-		return resp.SimpleString(storage.TypeString[storage.None]).WriteTo(ex.Buffer)
+		return resp.SimpleString(resp.TypeString[resp.None]).WriteTo(ex.Buffer)
 	}
-	return resp.SimpleString(storage.TypeString[tipe]).WriteTo(ex.Buffer)
+	return resp.SimpleString(resp.TypeString[tipe]).WriteTo(ex.Buffer)
 }

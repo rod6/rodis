@@ -6,6 +6,7 @@
 package storage
 
 import (
+	"github.com/rod6/rodis/resp"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -37,12 +38,12 @@ func (ldb *LevelDB) PutString(key []byte, value []byte) {
 	valueKey := encodeStringKey(key)
 
 	exists, tipe := ldb.has(metaKey)
-	if exists && tipe != String { // If exists data is not string, should delete it.
+	if exists && tipe != resp.String { // If exists data is not string, should delete it.
 		ldb.delete([][]byte{metaKey, valueKey})
 	}
 
 	batch := new(leveldb.Batch)
-	batch.Put(metaKey, encodeMetadata(String))
+	batch.Put(metaKey, encodeMetadata(resp.String))
 	batch.Put(valueKey, value)
 	if err := ldb.db.Write(batch, nil); err != nil {
 		panic(err)

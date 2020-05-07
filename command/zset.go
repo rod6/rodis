@@ -11,22 +11,19 @@ import (
 	"strings"
 
 	"github.com/rod6/rodis/resp"
-	"github.com/rod6/rodis/storage"
 )
 
-// Implement for command list in http://redis.io/commands#hash
-//
-// command		status
-// ---------------------
-// ZADD          done
-// ZCARD         done
-// ZRANGE        done
-// ZRANGEBYSCORE done
-// ZRANK         done
-// ZREM          done
+// command
+// ------------
+// ZADD
+// ZCARD
+// ZRANGE
+// ZRANGEBYSCORE
+// ZRANK
+// ZREM
 
 // zadd -> https://redis.io/commands/zadd
-func zadd(v resp.CommandArgs, ex *Extras) error {
+func zadd(v args, ex *Extras) error {
 	if len(v) <= 1 || len(v)%2 != 1 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "zadd").WriteTo(ex.Buffer)
 	}
@@ -35,7 +32,7 @@ func zadd(v resp.CommandArgs, ex *Extras) error {
 	defer ex.DB.Unlock()
 
 	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.SortedSet {
+	if exist && tipe != resp.SortedSet {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -46,19 +43,19 @@ func zadd(v resp.CommandArgs, ex *Extras) error {
 		}
 		field := v[i+1]
 
-		ex.DB.AddSkipField(v[0], storage.SortedSet, field, score)
+		ex.DB.AddSkipField(v[0], resp.SortedSet, field, score)
 		i += 2
 	}
 	return resp.Integer(len(v) / 2).WriteTo(ex.Buffer)
 }
 
 // zcard -> https://redis.io/commands/zcard
-func zcard(v resp.CommandArgs, ex *Extras) error {
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
+func zcard(v args, ex *Extras) error {
+	ex.DB.RLock()
+	defer ex.DB.RUnlock()
 
 	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.SortedSet {
+	if exist && tipe != resp.SortedSet {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -66,7 +63,7 @@ func zcard(v resp.CommandArgs, ex *Extras) error {
 }
 
 // zrange -> https://redis.io/commands/zrange
-func zrange(v resp.CommandArgs, ex *Extras) error {
+func zrange(v args, ex *Extras) error {
 	if len(v) != 3 && len(v) != 4 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "range").WriteTo(ex.Buffer)
 	}
@@ -79,14 +76,14 @@ func zrange(v resp.CommandArgs, ex *Extras) error {
 		withscores = true
 	}
 
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
+	ex.DB.RLock()
+	defer ex.DB.RUnlock()
 
 	exist, tipe := ex.DB.Has(v[0])
 	if !exist {
 		return resp.EmptyArray.WriteTo(ex.Buffer)
 	}
-	if exist && tipe != storage.SortedSet {
+	if exist && tipe != resp.SortedSet {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -112,7 +109,7 @@ func zrange(v resp.CommandArgs, ex *Extras) error {
 }
 
 // zrangebyscore -> https://redis.io/commands/zrangebyscore
-func zrangebyscore(v resp.CommandArgs, ex *Extras) error {
+func zrangebyscore(v args, ex *Extras) error {
 	if len(v) != 3 && len(v) != 4 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "zrangebyscore").WriteTo(ex.Buffer)
 	}
@@ -158,14 +155,14 @@ func zrangebyscore(v resp.CommandArgs, ex *Extras) error {
 		withscores = true
 	}
 
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
+	ex.DB.RLock()
+	defer ex.DB.RUnlock()
 
 	exist, tipe := ex.DB.Has(v[0])
 	if !exist {
 		return resp.EmptyArray.WriteTo(ex.Buffer)
 	}
-	if exist && tipe != storage.SortedSet {
+	if exist && tipe != resp.SortedSet {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
@@ -182,12 +179,12 @@ func zrangebyscore(v resp.CommandArgs, ex *Extras) error {
 }
 
 // zrank -> https://redis.io/commands/zrank
-func zrank(v resp.CommandArgs, ex *Extras) error {
-	ex.DB.Lock()
-	defer ex.DB.Unlock()
+func zrank(v args, ex *Extras) error {
+	ex.DB.RLock()
+	defer ex.DB.RUnlock()
 
 	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.SortedSet {
+	if exist && tipe != resp.SortedSet {
 		return resp.NilBulkString.WriteTo(ex.Buffer)
 	}
 
@@ -199,12 +196,12 @@ func zrank(v resp.CommandArgs, ex *Extras) error {
 }
 
 // zrem -> https://redis.io/commands/zrem
-func zrem(v resp.CommandArgs, ex *Extras) error {
+func zrem(v args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
 	exist, tipe := ex.DB.Has(v[0])
-	if exist && tipe != storage.SortedSet {
+	if exist && tipe != resp.SortedSet {
 		return resp.NewError(ErrWrongType).WriteTo(ex.Buffer)
 	}
 
