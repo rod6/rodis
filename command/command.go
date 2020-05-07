@@ -127,6 +127,14 @@ var commands = map[string]*attr{
 	"smove":       {smove, 4},
 	"spop":        {spop, 2},
 	"srandmember": {srandmember, 2},
+
+	// zsets
+	"zadd":          {zadd, 0},
+	"zcard":         {zcard, 2},
+	"zrange":        {zrange, 0},
+	"zrangebyscore": {zrangebyscore, 0},
+	"zrank":         {zrank, 3},
+	"zrem":          {zrem, 3},
 }
 
 // Get command handler

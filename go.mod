@@ -11,6 +11,7 @@ require (
 	github.com/pborman/uuid v1.2.0
 	github.com/syndtr/goleveldb v1.0.0
 	golang.org/x/text v0.3.2 // indirect
+	google.golang.org/appengine v1.6.6
 )
 
 replace github.com/rod6/rodis => ./
