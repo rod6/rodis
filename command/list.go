@@ -31,7 +31,7 @@ import (
 // RPUSHX
 
 // lindex -> https://redis.io/commands/lindex
-func lindex(v args, ex *Extras) error {
+func lindex(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -63,7 +63,7 @@ func lindex(v args, ex *Extras) error {
 }
 
 // linsert -> https://redis.io/commands/linsert
-func linsert(v args, ex *Extras) error {
+func linsert(v Args, ex *Extras) error {
 	d := strings.ToLower(string(v[1]))
 	if d != "before" && d != "after" {
 		return resp.NewError(ErrSyntax).WriteTo(ex.Buffer)
@@ -85,7 +85,7 @@ func linsert(v args, ex *Extras) error {
 }
 
 // llen -> https://redis.io/commands/llen
-func llen(v args, ex *Extras) error {
+func llen(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -102,7 +102,7 @@ func llen(v args, ex *Extras) error {
 }
 
 // lpop -> https://redis.io/commands/lpop
-func lpop(v args, ex *Extras) error {
+func lpop(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -123,7 +123,7 @@ func lpop(v args, ex *Extras) error {
 }
 
 // lpush -> https://redis.io/commands/lpush
-func lpush(v args, ex *Extras) error {
+func lpush(v Args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "lpush").WriteTo(ex.Buffer)
 	}
@@ -144,7 +144,7 @@ func lpush(v args, ex *Extras) error {
 }
 
 // lpushx -> https://redis.io/commands/lpushx
-func lpushx(v args, ex *Extras) error {
+func lpushx(v Args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "lpushx").WriteTo(ex.Buffer)
 	}
@@ -168,7 +168,7 @@ func lpushx(v args, ex *Extras) error {
 }
 
 // lrange -> https://redis.io/commands/lrange
-func lrange(v args, ex *Extras) error {
+func lrange(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -199,7 +199,7 @@ func lrange(v args, ex *Extras) error {
 }
 
 // lrem -> https://redis.io/commands/lrem
-func lrem(v args, ex *Extras) error {
+func lrem(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -225,7 +225,7 @@ func lrem(v args, ex *Extras) error {
 }
 
 // lset -> https://redis.io/commands/lset
-func lset(v args, ex *Extras) error {
+func lset(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -250,7 +250,7 @@ func lset(v args, ex *Extras) error {
 }
 
 // ltrim -> https://redis.io/commands/ltrim
-func ltrim(v args, ex *Extras) error {
+func ltrim(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -276,7 +276,7 @@ func ltrim(v args, ex *Extras) error {
 }
 
 // rpop -> https://redis.io/commands/rpop
-func rpop(v args, ex *Extras) error {
+func rpop(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -297,7 +297,7 @@ func rpop(v args, ex *Extras) error {
 }
 
 // rpoplpush -> https://redis.io/commands/rpoplpush
-func rpoplpush(v args, ex *Extras) error {
+func rpoplpush(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -328,7 +328,7 @@ func rpoplpush(v args, ex *Extras) error {
 }
 
 // rpush -> https://redis.io/commands/rpush
-func rpush(v args, ex *Extras) error {
+func rpush(v Args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "rpush").WriteTo(ex.Buffer)
 	}
@@ -349,7 +349,7 @@ func rpush(v args, ex *Extras) error {
 }
 
 // rpushx -> https://redis.io/commands/rpushx
-func rpushx(v args, ex *Extras) error {
+func rpushx(v Args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "rpushx").WriteTo(ex.Buffer)
 	}

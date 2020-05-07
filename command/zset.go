@@ -23,7 +23,7 @@ import (
 // ZREM
 
 // zadd -> https://redis.io/commands/zadd
-func zadd(v args, ex *Extras) error {
+func zadd(v Args, ex *Extras) error {
 	if len(v) <= 1 || len(v)%2 != 1 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "zadd").WriteTo(ex.Buffer)
 	}
@@ -50,7 +50,7 @@ func zadd(v args, ex *Extras) error {
 }
 
 // zcard -> https://redis.io/commands/zcard
-func zcard(v args, ex *Extras) error {
+func zcard(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -63,7 +63,7 @@ func zcard(v args, ex *Extras) error {
 }
 
 // zrange -> https://redis.io/commands/zrange
-func zrange(v args, ex *Extras) error {
+func zrange(v Args, ex *Extras) error {
 	if len(v) != 3 && len(v) != 4 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "range").WriteTo(ex.Buffer)
 	}
@@ -109,7 +109,7 @@ func zrange(v args, ex *Extras) error {
 }
 
 // zrangebyscore -> https://redis.io/commands/zrangebyscore
-func zrangebyscore(v args, ex *Extras) error {
+func zrangebyscore(v Args, ex *Extras) error {
 	if len(v) != 3 && len(v) != 4 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "zrangebyscore").WriteTo(ex.Buffer)
 	}
@@ -179,7 +179,7 @@ func zrangebyscore(v args, ex *Extras) error {
 }
 
 // zrank -> https://redis.io/commands/zrank
-func zrank(v args, ex *Extras) error {
+func zrank(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -196,7 +196,7 @@ func zrank(v args, ex *Extras) error {
 }
 
 // zrem -> https://redis.io/commands/zrem
-func zrem(v args, ex *Extras) error {
+func zrem(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 

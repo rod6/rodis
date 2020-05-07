@@ -44,7 +44,7 @@ import (
 const STRLIMIT = 536870912 // 512M
 
 // appendx -> https://redis.io/commands/append
-func appendx(v args, ex *Extras) error {
+func appendx(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -67,7 +67,7 @@ func appendx(v args, ex *Extras) error {
 }
 
 // bitcount -> https://redis.io/commands/bitcount
-func bitcount(v args, ex *Extras) error {
+func bitcount(v Args, ex *Extras) error {
 	if len(v) == 0 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "bitcount").WriteTo(ex.Buffer)
 	}
@@ -119,7 +119,7 @@ func bitcount(v args, ex *Extras) error {
 }
 
 // bitop -> https://redis.io/commands/bitop
-func bitop(v args, ex *Extras) error {
+func bitop(v Args, ex *Extras) error {
 	if len(v) < 3 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "bitop").WriteTo(ex.Buffer)
 	}
@@ -191,7 +191,7 @@ func bitop(v args, ex *Extras) error {
 }
 
 // bitpos -> https://redis.io/commands/bitpos
-func bitpos(v args, ex *Extras) error {
+func bitpos(v Args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "bitpos").WriteTo(ex.Buffer)
 	}
@@ -297,13 +297,13 @@ func bitpos(v args, ex *Extras) error {
 }
 
 // decr -> https://redis.io/commands/decr
-func decr(v args, ex *Extras) error {
+func decr(v Args, ex *Extras) error {
 	return incrdecrHelper(v, ex, -1)
 }
 
 // decrby -> https://redis.io/commands/decrby
-func decrby(v args, ex *Extras) error {
-	by, err := strconv.ParseInt(v[1].String(), 10, 64)
+func decrby(v Args, ex *Extras) error {
+	by, err := strconv.ParseInt(string(v[1]), 10, 64)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
 	}
@@ -311,7 +311,7 @@ func decrby(v args, ex *Extras) error {
 }
 
 // get -> https://redis.io/commands/get
-func get(v args, ex *Extras) error {
+func get(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -327,7 +327,7 @@ func get(v args, ex *Extras) error {
 }
 
 // getbit -> https://redis.io/commands/getbit
-func getbit(v args, ex *Extras) error {
+func getbit(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -358,7 +358,7 @@ func getbit(v args, ex *Extras) error {
 }
 
 // getrange -> https://redis.io/commands/getrange
-func getrange(v args, ex *Extras) error {
+func getrange(v Args, ex *Extras) error {
 	start, err := strconv.Atoi(string(v[1]))
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -390,7 +390,7 @@ func getrange(v args, ex *Extras) error {
 }
 
 // getset -> https://redis.io/commands/getset
-func getset(v args, ex *Extras) error {
+func getset(v Args, ex *Extras) error {
 	if len(v[1]) > STRLIMIT {
 		return resp.NewError(ErrStringExccedLimit).WriteTo(ex.Buffer)
 	}
@@ -416,13 +416,13 @@ func getset(v args, ex *Extras) error {
 }
 
 // incr -> https://redis.io/commands/incr
-func incr(v args, ex *Extras) error {
+func incr(v Args, ex *Extras) error {
 	return incrdecrHelper(v, ex, 1)
 }
 
 // incrby -> https://redis.io/commands/incrby
-func incrby(v args, ex *Extras) error {
-	by, err := strconv.ParseInt(v[1].String(), 10, 64)
+func incrby(v Args, ex *Extras) error {
+	by, err := strconv.ParseInt(string(v[1]), 10, 64)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
 	}
@@ -430,8 +430,8 @@ func incrby(v args, ex *Extras) error {
 }
 
 // incrbyfloat -> https://redis.io/commands/incrbyfloat
-func incrbyfloat(v args, ex *Extras) error {
-	by, err := strconv.ParseFloat(v[1].String(), 64)
+func incrbyfloat(v Args, ex *Extras) error {
+	by, err := strconv.ParseFloat(string(v[1]), 64)
 	if err != nil {
 		return resp.NewError(ErrNotValidFloat).WriteTo(ex.Buffer)
 	}
@@ -462,7 +462,7 @@ func incrbyfloat(v args, ex *Extras) error {
 }
 
 // mget -> https://redis.io/commands/mget
-func mget(v args, ex *Extras) error {
+func mget(v Args, ex *Extras) error {
 	if len(v) < 1 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "mget").WriteTo(ex.Buffer)
 	}
@@ -485,7 +485,7 @@ func mget(v args, ex *Extras) error {
 }
 
 // mset -> https://redis.io/commands/mset
-func mset(v args, ex *Extras) error {
+func mset(v Args, ex *Extras) error {
 	if len(v) == 0 || len(v)%2 != 0 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "mset").WriteTo(ex.Buffer)
 	}
@@ -502,7 +502,7 @@ func mset(v args, ex *Extras) error {
 }
 
 // msetnx -> https://redis.io/commands/msetnx
-func msetnx(v args, ex *Extras) error {
+func msetnx(v Args, ex *Extras) error {
 	if len(v) == 0 || len(v)%2 != 0 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "msetnx").WriteTo(ex.Buffer)
 	}
@@ -527,7 +527,7 @@ func msetnx(v args, ex *Extras) error {
 }
 
 // psetex -> https://redis.io/commands/psetex
-func psetex(v args, ex *Extras) error {
+func psetex(v Args, ex *Extras) error {
 	expire, err := strconv.ParseInt(string(v[1]), 10, 32)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -545,7 +545,7 @@ func psetex(v args, ex *Extras) error {
 }
 
 // set -> https://redis.io/commands/set
-func set(v args, ex *Extras) error {
+func set(v Args, ex *Extras) error {
 	if len(v) <= 1 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "set").WriteTo(ex.Buffer)
 	}
@@ -627,7 +627,7 @@ func set(v args, ex *Extras) error {
 }
 
 // setbit -> https://redis.io/commands/setbit
-func setbit(v args, ex *Extras) error {
+func setbit(v Args, ex *Extras) error {
 	i64, err := strconv.ParseInt(string(v[1]), 10, 32)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -678,7 +678,7 @@ func setbit(v args, ex *Extras) error {
 }
 
 // setex -> https://redis.io/commands/setex
-func setex(v args, ex *Extras) error {
+func setex(v Args, ex *Extras) error {
 	expire, err := strconv.ParseInt(string(v[1]), 10, 32)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -696,7 +696,7 @@ func setex(v args, ex *Extras) error {
 }
 
 // setnx -> https://redis.io/commands/setnx
-func setnx(v args, ex *Extras) error {
+func setnx(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -711,7 +711,7 @@ func setnx(v args, ex *Extras) error {
 }
 
 // setrange -> https://redis.io/commands/setrange
-func setrange(v args, ex *Extras) error {
+func setrange(v Args, ex *Extras) error {
 	i64, err := strconv.ParseInt(string(v[1]), 10, 32)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -747,7 +747,7 @@ func setrange(v args, ex *Extras) error {
 }
 
 // strlen -> https://redis.io/commands/strlen
-func strlen(v args, ex *Extras) error {
+func strlen(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -845,7 +845,7 @@ func calcRange(start, end, len int) (int, int) {
 	return start, end
 }
 
-func incrdecrHelper(v args, ex *Extras, by int64) error {
+func incrdecrHelper(v Args, ex *Extras, by int64) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 

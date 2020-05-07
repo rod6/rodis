@@ -16,8 +16,8 @@ import (
 	"github.com/rod6/rodis/storage"
 )
 
-// args: Command Args
-type args []resp.BulkString
+// Args: Command Args
+type Args [][]byte
 
 type Extras struct {
 	DB       *storage.LevelDB
@@ -27,9 +27,9 @@ type Extras struct {
 }
 
 // commandFunc is handle function
-// args: the args from client
+// Args: the Args from client
 // Extras: extra information
-type commandFunc func(v args, ex *Extras) error
+type commandFunc func(v Args, ex *Extras) error
 
 // command map attr struct
 type attr struct {
@@ -159,12 +159,12 @@ func Handle(v resp.Array, ex *Extras) error {
 		return resp.NewError(ErrFmtNoCommand).WriteTo(ex.Buffer)
 	}
 
-	args := make(args, 0)
+	Args := make(Args, 0)
 	for _, e := range v {
-		args = append(args, e.(resp.BulkString))
+		Args = append(Args, e.(resp.BulkString))
 	}
 
-	cmd := strings.ToLower(args[0].String())
+	cmd := strings.ToLower(string(Args[0]))
 	a, err := findCmdFunc(cmd)
 	if err != nil {
 		return resp.NewError(ErrFmtUnknownCommand, cmd).WriteTo(ex.Buffer)
@@ -180,7 +180,7 @@ func Handle(v resp.Array, ex *Extras) error {
 	}
 
 	// call command handler
-	return a.f(args[1:], ex)
+	return a.f(Args[1:], ex)
 }
 
 const (

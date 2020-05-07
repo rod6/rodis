@@ -31,7 +31,7 @@ import (
 // HVALS
 
 // hdel -> https://redis.io/commands/hdel
-func hdel(v args, ex *Extras) error {
+func hdel(v Args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "hdel").WriteTo(ex.Buffer)
 	}
@@ -64,7 +64,7 @@ func hdel(v args, ex *Extras) error {
 }
 
 // hexists -> https://redis.io/commands/hexist
-func hexists(v args, ex *Extras) error {
+func hexists(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -81,7 +81,7 @@ func hexists(v args, ex *Extras) error {
 }
 
 // hget -> https://redis.io/commands/hget
-func hget(v args, ex *Extras) error {
+func hget(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -102,7 +102,7 @@ func hget(v args, ex *Extras) error {
 }
 
 // hgetall -> https://redis.io/commands/hgetall
-func hgetall(v args, ex *Extras) error {
+func hgetall(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -124,8 +124,8 @@ func hgetall(v args, ex *Extras) error {
 }
 
 // hincrby -> https://redis.io/commands/hincrby
-func hincrby(v args, ex *Extras) error {
-	by, err := strconv.ParseInt(v[2].String(), 10, 64)
+func hincrby(v Args, ex *Extras) error {
+	by, err := strconv.ParseInt(string(v[2]), 10, 64)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
 	}
@@ -157,8 +157,8 @@ func hincrby(v args, ex *Extras) error {
 }
 
 // hincrbyfloat -> https://redis.io/commands/hincrbyfloat
-func hincrbyfloat(v args, ex *Extras) error {
-	by, err := strconv.ParseFloat(v[2].String(), 64)
+func hincrbyfloat(v Args, ex *Extras) error {
+	by, err := strconv.ParseFloat(string(v[2]), 64)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
 	}
@@ -190,7 +190,7 @@ func hincrbyfloat(v args, ex *Extras) error {
 }
 
 // hkeys -> https://redis.io/commands/hkeys
-func hkeys(v args, ex *Extras) error {
+func hkeys(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -212,7 +212,7 @@ func hkeys(v args, ex *Extras) error {
 }
 
 // hvals -> https://redis.io/commands/hvals
-func hvals(v args, ex *Extras) error {
+func hvals(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -234,7 +234,7 @@ func hvals(v args, ex *Extras) error {
 }
 
 // hlen -> https://redis.io/commands/hlen
-func hlen(v args, ex *Extras) error {
+func hlen(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -251,7 +251,7 @@ func hlen(v args, ex *Extras) error {
 }
 
 // hmget -> https://redis.io/commands/hmget
-func hmget(v args, ex *Extras) error {
+func hmget(v Args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "hmget").WriteTo(ex.Buffer)
 	}
@@ -282,7 +282,7 @@ func hmget(v args, ex *Extras) error {
 }
 
 // hmset -> https://redis.io/commands/hmset
-func hmset(v args, ex *Extras) error {
+func hmset(v Args, ex *Extras) error {
 	if len(v) <= 1 || len(v)%2 != 1 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "hmset").WriteTo(ex.Buffer)
 	}
@@ -305,7 +305,7 @@ func hmset(v args, ex *Extras) error {
 }
 
 // hset -> https://redis.io/commands/hset
-func hset(v args, ex *Extras) error {
+func hset(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -330,7 +330,7 @@ func hset(v args, ex *Extras) error {
 }
 
 // hsetnx -> https://redis.io/commands/hsetnx
-func hsetnx(v args, ex *Extras) error {
+func hsetnx(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -354,7 +354,7 @@ func hsetnx(v args, ex *Extras) error {
 }
 
 // hstrlen -> https://redis.io/commands/hstrlen
-func hstrlen(v args, ex *Extras) error {
+func hstrlen(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 

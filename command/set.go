@@ -30,7 +30,7 @@ import (
 // SUNIONSTORE
 
 // sadd -> https://redis.io/commands/sadd
-func sadd(v args, ex *Extras) error {
+func sadd(v Args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sadd").WriteTo(ex.Buffer)
 	}
@@ -49,12 +49,12 @@ func sadd(v args, ex *Extras) error {
 	}
 	ex.DB.PutHash(v[0], resp.Set, hash)
 	// TODO: sadd returns the number that added to the set
-	// Now, we return the number of args, will update later.
+	// Now, we return the number of Args, will update later.
 	return resp.Integer(len(v[1:])).WriteTo(ex.Buffer)
 }
 
 // scard -> https://redis.io/commands/scard
-func scard(v args, ex *Extras) error {
+func scard(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -71,7 +71,7 @@ func scard(v args, ex *Extras) error {
 }
 
 // sdiff -> https://redis.io/commands/sdiff
-func sdiff(v args, ex *Extras) error {
+func sdiff(v Args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sdiff").WriteTo(ex.Buffer)
 	}
@@ -104,7 +104,7 @@ func sdiff(v args, ex *Extras) error {
 }
 
 // sdiffstore -> https://redis.io/commands/sdiffstore
-func sdiffstore(v args, ex *Extras) error {
+func sdiffstore(v Args, ex *Extras) error {
 	if len(v) < 3 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sdiffstore").WriteTo(ex.Buffer)
 	}
@@ -141,7 +141,7 @@ func sdiffstore(v args, ex *Extras) error {
 }
 
 // sinter -> https://redis.io/commands/sinter
-func sinter(v args, ex *Extras) error {
+func sinter(v Args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sinter").WriteTo(ex.Buffer)
 	}
@@ -178,7 +178,7 @@ func sinter(v args, ex *Extras) error {
 }
 
 // sinterstore -> https://redis.io/commands/sinterstore
-func sinterstore(v args, ex *Extras) error {
+func sinterstore(v Args, ex *Extras) error {
 	if len(v) < 3 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sinterstore").WriteTo(ex.Buffer)
 	}
@@ -219,7 +219,7 @@ func sinterstore(v args, ex *Extras) error {
 }
 
 // sismember -> https://redis.io/commands/sismember
-func sismember(v args, ex *Extras) error {
+func sismember(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -239,7 +239,7 @@ func sismember(v args, ex *Extras) error {
 }
 
 // smembers -> https://redis.io/commands/smembers
-func smembers(v args, ex *Extras) error {
+func smembers(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -261,7 +261,7 @@ func smembers(v args, ex *Extras) error {
 }
 
 // smove -> https://redis.io/commands/smove
-func smove(v args, ex *Extras) error {
+func smove(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -288,7 +288,7 @@ func smove(v args, ex *Extras) error {
 }
 
 // spop -> https://redis.io/commands/spop
-func spop(v args, ex *Extras) error {
+func spop(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -308,7 +308,7 @@ func spop(v args, ex *Extras) error {
 }
 
 // srandmember -> https://redis.io/commands/srandmember
-func srandmember(v args, ex *Extras) error {
+func srandmember(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 
@@ -327,7 +327,7 @@ func srandmember(v args, ex *Extras) error {
 }
 
 // srem -> https://redis.io/commands/srem
-func srem(v args, ex *Extras) error {
+func srem(v Args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "srem").WriteTo(ex.Buffer)
 	}
@@ -360,7 +360,7 @@ func srem(v args, ex *Extras) error {
 }
 
 // sunion -> https://redis.io/commands/sunion
-func sunion(v args, ex *Extras) error {
+func sunion(v Args, ex *Extras) error {
 	if len(v) < 1 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sunion").WriteTo(ex.Buffer)
 	}
@@ -392,7 +392,7 @@ func sunion(v args, ex *Extras) error {
 }
 
 // sunionstore -> https://redis.io/commands/sunionstore
-func sunionstore(v args, ex *Extras) error {
+func sunionstore(v Args, ex *Extras) error {
 	if len(v) < 2 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "sunionstore").WriteTo(ex.Buffer)
 	}

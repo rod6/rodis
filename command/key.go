@@ -26,7 +26,7 @@ import (
 // TYPE
 
 // del -> https://redis.io/commands/del
-func del(v args, ex *Extras) error {
+func del(v Args, ex *Extras) error {
 	if len(v) == 0 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "del").WriteTo(ex.Buffer)
 	}
@@ -59,7 +59,7 @@ func del(v args, ex *Extras) error {
 }
 
 // exists -> https://redis.io/commands/exists
-func exists(v args, ex *Extras) error {
+func exists(v Args, ex *Extras) error {
 	if len(v) == 0 {
 		return resp.NewError(ErrFmtWrongNumberArgument, "exists").WriteTo(ex.Buffer)
 	}
@@ -79,7 +79,7 @@ func exists(v args, ex *Extras) error {
 }
 
 // expire -> https://redis.io/commands/expire
-func expire(v args, ex *Extras) error {
+func expire(v Args, ex *Extras) error {
 	expire, err := strconv.ParseInt(string(v[1]), 10, 32)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -101,7 +101,7 @@ func expire(v args, ex *Extras) error {
 }
 
 // expireat -> https://redis.io/commands/expireat
-func expireat(v args, ex *Extras) error {
+func expireat(v Args, ex *Extras) error {
 	expireat, err := strconv.ParseInt(string(v[1]), 10, 64)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -123,7 +123,7 @@ func expireat(v args, ex *Extras) error {
 }
 
 // pexpire -> https://redis.io/commands/pexpire
-func pexpire(v args, ex *Extras) error {
+func pexpire(v Args, ex *Extras) error {
 	pexpire, err := strconv.ParseInt(string(v[1]), 10, 32)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -145,7 +145,7 @@ func pexpire(v args, ex *Extras) error {
 }
 
 // pexpireat -> https://redis.io/commands/expireat
-func pexpireat(v args, ex *Extras) error {
+func pexpireat(v Args, ex *Extras) error {
 	pexpireat, err := strconv.ParseInt(string(v[1]), 10, 64)
 	if err != nil {
 		return resp.NewError(ErrNotValidInt).WriteTo(ex.Buffer)
@@ -167,7 +167,7 @@ func pexpireat(v args, ex *Extras) error {
 }
 
 // pttl -> https://redis.io/commands/pttl
-func pttl(v args, ex *Extras) error {
+func pttl(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -188,7 +188,7 @@ func pttl(v args, ex *Extras) error {
 }
 
 // ttl -> https://redis.io/commands/ttl
-func ttl(v args, ex *Extras) error {
+func ttl(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -209,7 +209,7 @@ func ttl(v args, ex *Extras) error {
 }
 
 // tipe -> https://redis.io/commands/type
-func tipe(v args, ex *Extras) error {
+func tipe(v Args, ex *Extras) error {
 	ex.DB.RLock()
 	defer ex.DB.RUnlock()
 

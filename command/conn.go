@@ -22,11 +22,11 @@ import (
 // SELECT
 
 // auth: https://redis.io/commands/auth
-func auth(v args, ex *Extras) error {
+func auth(v Args, ex *Extras) error {
 	if ex.Password == "" {
 		return resp.NewError(ErrNoNeedPassword).WriteTo(ex.Buffer)
 	}
-	if v[0].String() != ex.Password {
+	if string(v[0]) != ex.Password {
 		ex.Authed = false
 		return resp.NewError(ErrWrongPassword).WriteTo(ex.Buffer)
 	}
@@ -35,17 +35,17 @@ func auth(v args, ex *Extras) error {
 }
 
 // echo: https://redis.io/commands/echo
-func echo(v args, ex *Extras) error {
-	return v[0].WriteTo(ex.Buffer)
+func echo(v Args, ex *Extras) error {
+	return resp.BulkString(v[0]).WriteTo(ex.Buffer)
 }
 
 // ping: https://redis.io/commands/ping
-func ping(v args, ex *Extras) error {
+func ping(v Args, ex *Extras) error {
 	return resp.PongSimpleString.WriteTo(ex.Buffer)
 }
 
 // flushdb: https://redis.io/commands/flushdb
-func flushdb(v args, ex *Extras) error {
+func flushdb(v Args, ex *Extras) error {
 	ex.DB.Lock()
 	defer ex.DB.Unlock()
 
@@ -56,8 +56,8 @@ func flushdb(v args, ex *Extras) error {
 }
 
 // selectdb: https://redis.io/commands/select
-func selectdb(v args, ex *Extras) error {
-	s := v[0].String()
+func selectdb(v Args, ex *Extras) error {
+	s := string(v[0])
 	index, err := strconv.Atoi(s)
 	if err != nil {
 		return resp.NewError(ErrSelectInvalidIndex).WriteTo(ex.Buffer)
