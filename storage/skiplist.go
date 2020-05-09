@@ -66,14 +66,10 @@ func encodeSkipFieldKey(key []byte, field []byte) []byte {
 func (ldb *LevelDB) DeleteSkip(key []byte) {
 	keys := [][]byte{encodeMetaKey(key)}
 
-	keyPrefix := make([]byte, 1+len(key))
-	keyPrefix[0] = ValuePrefix
-	copy(keyPrefix[1:], key)
-
+	keyPrefix := append([]byte{ValuePrefix}, key...)
 	iter := ldb.db.NewIterator(util.BytesPrefix(keyPrefix), nil)
 	for iter.Next() {
-		key := append([]byte{}, iter.Key()...)
-		keys = append(keys, key)
+		keys = append(keys, append([]byte{}, iter.Key()...))
 	}
 	iter.Release()
 
@@ -92,13 +88,13 @@ func (ldb *LevelDB) deleteSkipNode(key []byte, attr *skipListAttr, head *skipLis
 	}
 
 	for _, element := range update {
-		ldb.PutSkipNode(key, element)
+		ldb.putSkipNode(key, element)
 	}
 
 	if node.levels[0].forward != nil {
-		forward := ldb.GetSkipNode(key, node.levels[0].forward)
+		forward := ldb.getSkipNode(key, node.levels[0].forward)
 		forward.backward = node.backward
-		ldb.PutSkipNode(key, forward)
+		ldb.putSkipNode(key, forward)
 	} else {
 		attr.tail = node.backward
 	}
@@ -115,14 +111,14 @@ func (ldb *LevelDB) deleteSkipNode(key []byte, attr *skipListAttr, head *skipLis
 	if attr.length == 0 {
 		ldb.DeleteSkip(key)
 	} else {
-		ldb.PutSkipNode(key, head)
-		ldb.PutSkipAttr(key, attr)
+		ldb.putSkipNode(key, head)
+		ldb.putSkipAttr(key, attr)
 		ldb.delete([][]byte{encodeSkipFieldKey(key, node.field)})
 	}
 }
 
-// DumpSkip
-func (ldb *LevelDB) DumpSkip(key []byte) {
+// dumpSkip
+func (ldb *LevelDB) dumpSkip(key []byte) {
 	attr := ldb.getSkipAttr(key)
 	if key == nil {
 		logx.Infof("skiplist [%v] attr == nil", string(key))
@@ -131,12 +127,12 @@ func (ldb *LevelDB) DumpSkip(key []byte) {
 
 	logx.Infof("skiplist [%v] attr == [length=%v, level=%v, tail=%v]", string(key), attr.length, attr.level, string(attr.tail))
 
-	head := ldb.GetSkipNode(key, SKIPHEAD)
+	head := ldb.getSkipNode(key, SKIPHEAD)
 	dumpNode(head)
 
 	next := head.levels[0].forward
 	for next != nil {
-		node := ldb.GetSkipNode(key, next)
+		node := ldb.getSkipNode(key, next)
 		dumpNode(node)
 		next = node.levels[0].forward
 	}
@@ -176,8 +172,8 @@ func (ldb *LevelDB) getSkipAttr(key []byte) *skipListAttr {
 	return &skipListAttr{length, level, tail}
 }
 
-// PutSkipAttr
-func (ldb *LevelDB) PutSkipAttr(key []byte, attr *skipListAttr) {
+// putSkipAttr
+func (ldb *LevelDB) putSkipAttr(key []byte, attr *skipListAttr) {
 	attrKey := encodeSkipFieldKey(key, []byte{0x00, 0x00, 0x00, 0x00})
 
 	m := make([]byte, 8)
@@ -190,14 +186,14 @@ func (ldb *LevelDB) PutSkipAttr(key []byte, attr *skipListAttr) {
 	ldb.put(attrKey, m)
 }
 
-// GetSkipNode
-func (ldb *LevelDB) GetSkipNode(key []byte, field []byte) *skipListNode {
+// getSkipNode
+func (ldb *LevelDB) getSkipNode(key []byte, field []byte) *skipListNode {
 	m := ldb.get(encodeSkipFieldKey(key, field))
 	if len(m) == 0 {
 		return nil
 	}
 
-	score := ByteToFloat64(m)
+	score := byteToFloat64(m)
 	var backward []byte = nil
 	backwardL := uint8(m[8])
 	if backwardL != 0 {
@@ -225,14 +221,14 @@ func (ldb *LevelDB) GetSkipNode(key []byte, field []byte) *skipListNode {
 	return &r
 }
 
-// PutSkipNode
-func (ldb *LevelDB) PutSkipNode(key []byte, node *skipListNode) {
+// putSkipNode
+func (ldb *LevelDB) putSkipNode(key []byte, node *skipListNode) {
 	if node == nil {
 		return
 	}
 	nodeKey := encodeSkipFieldKey(key, node.field)
 
-	m := Float64ToByte(node.score)
+	m := float64ToByte(node.score)
 	m = append(m, uint8(len(node.backward)))
 	m = append(m, node.backward...)
 
@@ -249,8 +245,8 @@ func (ldb *LevelDB) PutSkipNode(key []byte, node *skipListNode) {
 	ldb.put(nodeKey, m)
 }
 
-// InitSkipNode
-func (ldb *LevelDB) InitSkipNode(field []byte) *skipListNode {
+// initSkipNode
+func (ldb *LevelDB) initSkipNode(field []byte) *skipListNode {
 	levels := []skipListLevel{}
 	for i := 0; i < SKIPLISTMAXLEVEL; i++ {
 		levels = append(levels, skipListLevel{nil, 0})
@@ -265,12 +261,12 @@ func (ldb *LevelDB) AddSkipField(key []byte, tipe byte, field []byte, score floa
 	if attr == nil {
 		ldb.put(encodeMetaKey(key), encodeMetadata(tipe))
 		attr = &skipListAttr{0, 1, nil}
-		ldb.PutSkipAttr(key, attr)
+		ldb.putSkipAttr(key, attr)
 
-		ldb.PutSkipNode(key, ldb.InitSkipNode(SKIPHEAD))
+		ldb.putSkipNode(key, ldb.initSkipNode(SKIPHEAD))
 	}
 
-	head := ldb.GetSkipNode(key, SKIPHEAD)
+	head := ldb.getSkipNode(key, SKIPHEAD)
 
 	update := make([]*skipListNode, SKIPLISTMAXLEVEL)
 	rank := make([]uint32, SKIPLISTMAXLEVEL)
@@ -283,7 +279,7 @@ func (ldb *LevelDB) AddSkipField(key []byte, tipe byte, field []byte, score floa
 			rank[i] = rank[i+1]
 		}
 		for node.levels[i].forward != nil {
-			forward := ldb.GetSkipNode(key, node.levels[i].forward)
+			forward := ldb.getSkipNode(key, node.levels[i].forward)
 			if forward.score < score || (forward.score == score && bytes.Compare(forward.field, field) < 0) {
 				rank[i] = rank[i] + node.levels[i].span
 				node = forward
@@ -304,7 +300,7 @@ func (ldb *LevelDB) AddSkipField(key []byte, tipe byte, field []byte, score floa
 		attr.level = level
 	}
 
-	node = ldb.InitSkipNode(field)
+	node = ldb.initSkipNode(field)
 	node.score = score
 	for i := uint32(0); i < level; i++ {
 		node.levels[i].forward = update[i].levels[i].forward
@@ -323,26 +319,26 @@ func (ldb *LevelDB) AddSkipField(key []byte, tipe byte, field []byte, score floa
 	}
 
 	if len(node.levels[0].forward) != 0 {
-		forward := ldb.GetSkipNode(key, node.levels[0].forward)
+		forward := ldb.getSkipNode(key, node.levels[0].forward)
 		forward.backward = node.field
-		ldb.PutSkipNode(key, forward)
+		ldb.putSkipNode(key, forward)
 	} else {
 		attr.tail = node.field
 	}
 
 	attr.length = attr.length + 1
-	ldb.PutSkipAttr(key, attr)
-	ldb.PutSkipNode(key, node)
+	ldb.putSkipAttr(key, attr)
+	ldb.putSkipNode(key, node)
 	for _, u := range update {
 		if u != nil {
-			ldb.PutSkipNode(key, u)
+			ldb.putSkipNode(key, u)
 		}
 	}
 }
 
 // GetSkipFieldRank
 func (ldb *LevelDB) GetSkipFieldRank(key []byte, field []byte) (int, error) {
-	x := ldb.GetSkipNode(key, field)
+	x := ldb.getSkipNode(key, field)
 	if x == nil {
 		return 0, fmt.Errorf("Not found this field")
 	}
@@ -352,7 +348,7 @@ func (ldb *LevelDB) GetSkipFieldRank(key []byte, field []byte) (int, error) {
 		return 0, fmt.Errorf("Not found this zset")
 	}
 
-	head := ldb.GetSkipNode(key, SKIPHEAD)
+	head := ldb.getSkipNode(key, SKIPHEAD)
 	rank := make([]uint32, SKIPLISTMAXLEVEL)
 
 	node := head
@@ -363,7 +359,7 @@ func (ldb *LevelDB) GetSkipFieldRank(key []byte, field []byte) (int, error) {
 			rank[i] = rank[i+1]
 		}
 		for node.levels[i].forward != nil {
-			forward := ldb.GetSkipNode(key, node.levels[i].forward)
+			forward := ldb.getSkipNode(key, node.levels[i].forward)
 			if forward.score < x.score || (forward.score == x.score && bytes.Compare(forward.field, field) < 0) {
 				rank[i] = rank[i] + node.levels[i].span
 				node = forward
@@ -382,18 +378,18 @@ func (ldb *LevelDB) DeleteSkipField(key []byte, field []byte) int {
 	if attr == nil {
 		return 0
 	}
-	node := ldb.GetSkipNode(key, field)
+	node := ldb.getSkipNode(key, field)
 	if node == nil {
 		return 0
 	}
 
-	head := ldb.GetSkipNode(key, SKIPHEAD)
+	head := ldb.getSkipNode(key, SKIPHEAD)
 	update := make([]*skipListNode, SKIPLISTMAXLEVEL)
 
 	x := head
 	for i := int(attr.level - 1); i >= 0; i-- {
 		for x.levels[i].forward != nil {
-			forward := ldb.GetSkipNode(key, x.levels[i].forward)
+			forward := ldb.getSkipNode(key, x.levels[i].forward)
 			if forward.score < node.score || (forward.score == node.score && bytes.Compare(forward.field, field) < 0) {
 				x = forward
 			} else {
@@ -437,13 +433,13 @@ func (ldb *LevelDB) GetSkipRange(key []byte, start int, end int) []SkipListEleme
 		return r
 	}
 
-	node := ldb.GetSkipNode(key, SKIPHEAD)
+	node := ldb.getSkipNode(key, SKIPHEAD)
 	forward := node.levels[0].forward
 	for i := 0; i < start; i++ {
 		if forward == nil {
 			return r
 		}
-		node = ldb.GetSkipNode(key, forward)
+		node = ldb.getSkipNode(key, forward)
 		forward = node.levels[0].forward
 	}
 
@@ -451,7 +447,7 @@ func (ldb *LevelDB) GetSkipRange(key []byte, start int, end int) []SkipListEleme
 		if forward == nil {
 			return r
 		}
-		node = ldb.GetSkipNode(key, forward)
+		node = ldb.getSkipNode(key, forward)
 		forward = node.levels[0].forward
 		r = append(r, SkipListElement{node.field, node.score})
 	}
@@ -475,10 +471,10 @@ func (ldb *LevelDB) GetSkipRangeByScore(key []byte, min float64, minex bool, max
 		return r
 	}
 
-	node := ldb.GetSkipNode(key, SKIPHEAD)
+	node := ldb.getSkipNode(key, SKIPHEAD)
 	for i := int(attr.level - 1); i >= 0; i-- {
 		for node.levels[i].forward != nil {
-			forward := ldb.GetSkipNode(key, node.levels[i].forward)
+			forward := ldb.getSkipNode(key, node.levels[i].forward)
 			if !scoreGteMin(forward.score, min, minex) {
 				node = forward
 			} else {
@@ -487,11 +483,11 @@ func (ldb *LevelDB) GetSkipRangeByScore(key []byte, min float64, minex bool, max
 		}
 	}
 
-	node = ldb.GetSkipNode(key, node.levels[0].forward)
+	node = ldb.getSkipNode(key, node.levels[0].forward)
 	for node != nil {
 		if scoreLteMax(node.score, max, maxex) {
 			r = append(r, SkipListElement{node.field, node.score})
-			node = ldb.GetSkipNode(key, node.levels[0].forward)
+			node = ldb.getSkipNode(key, node.levels[0].forward)
 		} else {
 			break
 		}
@@ -515,14 +511,14 @@ func randomLevel() uint32 {
 	return level
 }
 
-func Float64ToByte(float float64) []byte {
+func float64ToByte(float float64) []byte {
 	bits := math.Float64bits(float)
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, bits)
 	return bytes
 }
 
-func ByteToFloat64(bytes []byte) float64 {
+func byteToFloat64(bytes []byte) float64 {
 	bits := binary.LittleEndian.Uint64(bytes)
 	return math.Float64frombits(bits)
 }

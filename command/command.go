@@ -183,6 +183,7 @@ func Handle(v resp.Array, ex *Extras) error {
 	return a.f(Args[1:], ex)
 }
 
+// Errors
 const (
 	ErrFmtNoCommand           = `ERR no command`
 	ErrFmtUnknownCommand      = `ERR unknown command '%s'`

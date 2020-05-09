@@ -16,13 +16,14 @@ import (
 // encodeFieldKey encodes hash field key: -Key|Number
 // Number=0 means the element to store attributes(length, head, tail, counter)
 func encodeListElementKey(key []byte, num uint32) []byte {
-	elementKey := make([]byte, 1 /* '-' */ +len(key)+1 /* '|' */ +4 /* num */)
-	elementKey[0] = ValuePrefix
-	copy(elementKey[1:], key)
-	elementKey[1+len(key)] = Seperator
+	elementKey := []byte{ValuePrefix}
+	elementKey = append(elementKey, key...)
+	elementKey = append(elementKey, Seperator)
+
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, num)
-	copy(elementKey[1+len(key)+1:], b)
+	elementKey = append(elementKey, b...)
+
 	return elementKey
 }
 
@@ -30,22 +31,20 @@ func encodeListElementKey(key []byte, num uint32) []byte {
 func (ldb *LevelDB) DeleteList(key []byte) {
 	keys := [][]byte{encodeMetaKey(key)}
 
-	keyPrefix := make([]byte, 1+len(key))
-	keyPrefix[0] = ValuePrefix
-	copy(keyPrefix[1:], key)
+	keyPrefix := []byte{ValuePrefix}
+	keyPrefix = append(keyPrefix, key...)
 
 	iter := ldb.db.NewIterator(util.BytesPrefix(keyPrefix), nil)
 	for iter.Next() {
-		key := append([]byte{}, iter.Key()...)
-		keys = append(keys, key)
+		keys = append(keys, append([]byte{}, iter.Key()...))
 	}
 	iter.Release()
 
 	ldb.delete(keys)
 }
 
-// GetListAttr
-func (ldb *LevelDB) GetListAttr(key []byte) (uint32, uint32, uint32, uint32) {
+// getListAttr
+func (ldb *LevelDB) getListAttr(key []byte) (uint32, uint32, uint32, uint32) {
 	m := ldb.get(encodeListElementKey(key, 0))
 	if len(m) < 16 { //no attr or invalid
 		return 0, 0, 0, 0
@@ -58,8 +57,8 @@ func (ldb *LevelDB) GetListAttr(key []byte) (uint32, uint32, uint32, uint32) {
 	return length, head, tail, counter
 }
 
-// PutListAttr
-func (ldb *LevelDB) PutListAttr(key []byte, length uint32, head uint32, tail uint32, counter uint32) {
+// putListAttr
+func (ldb *LevelDB) putListAttr(key []byte, length uint32, head uint32, tail uint32, counter uint32) {
 	r := make([]byte, 4+4+4+4)
 	binary.BigEndian.PutUint32(r[0:], length)
 	binary.BigEndian.PutUint32(r[4:], head)
@@ -69,8 +68,8 @@ func (ldb *LevelDB) PutListAttr(key []byte, length uint32, head uint32, tail uin
 	ldb.put(encodeListElementKey(key, 0), r)
 }
 
-// PutListElement
-func (ldb *LevelDB) PutListElement(key []byte, i uint32, next uint32, prev uint32, v []byte) {
+// putListElement
+func (ldb *LevelDB) putListElement(key []byte, i uint32, next uint32, prev uint32, v []byte) {
 	r := make([]byte, 4+4+len(v))
 	binary.BigEndian.PutUint32(r[0:], next)
 	binary.BigEndian.PutUint32(r[4:], prev)
@@ -79,10 +78,10 @@ func (ldb *LevelDB) PutListElement(key []byte, i uint32, next uint32, prev uint3
 	ldb.put(encodeListElementKey(key, i), r)
 }
 
-// GetListElement
-func (ldb *LevelDB) GetListElement(key []byte, i uint32) (uint32, uint32, []byte) {
+// getListElement
+func (ldb *LevelDB) getListElement(key []byte, i uint32) (uint32, uint32, []byte) {
 	r := ldb.get(encodeListElementKey(key, i))
-	if r == nil || len(r) == 0 {
+	if len(r) == 0 {
 		return 0, 0, nil
 	}
 
@@ -91,25 +90,25 @@ func (ldb *LevelDB) GetListElement(key []byte, i uint32) (uint32, uint32, []byte
 	return next, prev, r[8:]
 }
 
-// DelListElement
-func (ldb *LevelDB) DelListElement(key []byte, i uint32) {
-	next, prev, v := ldb.GetListElement(key, i)
+// delListElement
+func (ldb *LevelDB) delListElement(key []byte, i uint32) {
+	next, prev, v := ldb.getListElement(key, i)
 	ldb.delete([][]byte{encodeListElementKey(key, i)})
 
 	if next == i {
 		return
 	}
 
-	_, prevPrev, v := ldb.GetListElement(key, prev)
-	ldb.PutListElement(key, prev, next, prevPrev, v)
+	_, prevPrev, v := ldb.getListElement(key, prev)
+	ldb.putListElement(key, prev, next, prevPrev, v)
 
-	nextNext, _, v := ldb.GetListElement(key, next)
-	ldb.PutListElement(key, next, nextNext, prev, v)
+	nextNext, _, v := ldb.getListElement(key, next)
+	ldb.putListElement(key, next, nextNext, prev, v)
 }
 
 // SetListElement with index
 func (ldb *LevelDB) SetListElement(key []byte, index int, v []byte) error {
-	length, head, _, _ := ldb.GetListAttr(key)
+	length, head, _, _ := ldb.getListAttr(key)
 	if index < 0 {
 		index = index + int(length)
 	}
@@ -118,18 +117,18 @@ func (ldb *LevelDB) SetListElement(key []byte, index int, v []byte) error {
 	}
 	next := head
 	for i := 0; i < index; i++ {
-		next, _, _ = ldb.GetListElement(key, next)
+		next, _, _ = ldb.getListElement(key, next)
 	}
 	curr := next
-	next, prev, _ := ldb.GetListElement(key, curr)
-	ldb.PutListElement(key, curr, next, prev, v)
+	next, prev, _ := ldb.getListElement(key, curr)
+	ldb.putListElement(key, curr, next, prev, v)
 
 	return nil
 }
 
 // GetListRange
 func (ldb *LevelDB) GetListRange(key []byte, start int, end int) [][]byte {
-	length, head, _, _ := ldb.GetListAttr(key)
+	length, head, _, _ := ldb.getListAttr(key)
 
 	l := int(length)
 	if start < 0 {
@@ -159,13 +158,13 @@ func (ldb *LevelDB) GetListRange(key []byte, start int, end int) [][]byte {
 
 	next := head
 	for i := 0; i < start; i++ {
-		next, _, _ = ldb.GetListElement(key, next)
+		next, _, _ = ldb.getListElement(key, next)
 	}
 
 	var v []byte
 	for i := start; i <= end; i++ {
 		curr := next
-		next, _, v = ldb.GetListElement(key, curr)
+		next, _, v = ldb.getListElement(key, curr)
 		r = append(r, v)
 	}
 	return r
@@ -173,7 +172,7 @@ func (ldb *LevelDB) GetListRange(key []byte, start int, end int) [][]byte {
 
 // TrimList
 func (ldb *LevelDB) TrimList(key []byte, start int, end int) {
-	length, head, tail, counter := ldb.GetListAttr(key)
+	length, head, tail, counter := ldb.getListAttr(key)
 
 	l := int(length)
 	if start < 0 {
@@ -202,26 +201,26 @@ func (ldb *LevelDB) TrimList(key []byte, start int, end int) {
 	next := head
 	for i := 0; i < start; i++ {
 		trims = append(trims, encodeListElementKey(key, next))
-		next, _, _ = ldb.GetListElement(key, next)
+		next, _, _ = ldb.getListElement(key, next)
 	}
 
 	newHead := next
 	var v []byte
 	for i := start; i < end; i++ {
-		next, _, _ = ldb.GetListElement(key, next)
+		next, _, _ = ldb.getListElement(key, next)
 	}
 	newTail := next
 
-	for ; next != tail; next, _, _ = ldb.GetListElement(key, next) {
+	for ; next != tail; next, _, _ = ldb.getListElement(key, next) {
 		trims = append(trims, encodeListElementKey(key, next))
 	}
 
 	ldb.delete(trims)
-	next, prev, v := ldb.GetListElement(key, newHead)
-	ldb.PutListElement(key, newHead, next, newTail, v)
-	next, prev, v = ldb.GetListElement(key, newTail)
-	ldb.PutListElement(key, newTail, newHead, prev, v)
-	ldb.PutListAttr(key, uint32(end-start+1), newHead, newTail, counter)
+	next, prev, v := ldb.getListElement(key, newHead)
+	ldb.putListElement(key, newHead, next, newTail, v)
+	next, prev, v = ldb.getListElement(key, newTail)
+	ldb.putListElement(key, newTail, newHead, prev, v)
+	ldb.putListAttr(key, uint32(end-start+1), newHead, newTail, counter)
 }
 
 // RemList
@@ -231,7 +230,7 @@ func (ldb *LevelDB) RemList(key []byte, count int, value []byte) int {
 	}
 
 	r := 0
-	length, head, tail, counter := ldb.GetListAttr(key)
+	length, head, tail, counter := ldb.getListAttr(key)
 
 	curr := head
 	if count < 0 {
@@ -239,7 +238,7 @@ func (ldb *LevelDB) RemList(key []byte, count int, value []byte) int {
 	}
 
 	for access := 0; (access < int(length)) && (r < abs(count)); access++ {
-		next, prev, v := ldb.GetListElement(key, curr)
+		next, prev, v := ldb.getListElement(key, curr)
 
 		// if equal to the value
 		if bytes.Equal(value, v) {
@@ -251,7 +250,7 @@ func (ldb *LevelDB) RemList(key []byte, count int, value []byte) int {
 			}
 
 			// remove the element
-			ldb.DelListElement(key, curr)
+			ldb.delListElement(key, curr)
 
 			if curr == head {
 				head = next
@@ -268,13 +267,13 @@ func (ldb *LevelDB) RemList(key []byte, count int, value []byte) int {
 		}
 	}
 
-	ldb.PutListAttr(key, length-uint32(r), head, tail, counter)
+	ldb.putListAttr(key, length-uint32(r), head, tail, counter)
 	return r
 }
 
 // GetLindexFromHead
 func (ldb *LevelDB) GetLindexFromHead(key []byte, l uint32) []byte {
-	length, head, _, _ := ldb.GetListAttr(key)
+	length, head, _, _ := ldb.getListAttr(key)
 	if length < l+1 {
 		return nil
 	}
@@ -283,16 +282,16 @@ func (ldb *LevelDB) GetLindexFromHead(key []byte, l uint32) []byte {
 	v := []byte{}
 
 	for i := uint32(0); i < l; i++ {
-		next, _, _ = ldb.GetListElement(key, next)
+		next, _, _ = ldb.getListElement(key, next)
 	}
 
-	_, _, v = ldb.GetListElement(key, next)
+	_, _, v = ldb.getListElement(key, next)
 	return v
 }
 
 // GetLindexFromTail
 func (ldb *LevelDB) GetLindexFromTail(key []byte, l uint32) []byte {
-	length, _, tail, _ := ldb.GetListAttr(key)
+	length, _, tail, _ := ldb.getListAttr(key)
 	if length < uint32(l+1) {
 		return nil
 	}
@@ -301,16 +300,16 @@ func (ldb *LevelDB) GetLindexFromTail(key []byte, l uint32) []byte {
 	v := []byte{}
 
 	for i := uint32(0); i < l; i++ {
-		_, prev, _ = ldb.GetListElement(key, prev)
+		_, prev, _ = ldb.getListElement(key, prev)
 	}
 
-	_, _, v = ldb.GetListElement(key, prev)
+	_, _, v = ldb.getListElement(key, prev)
 	return v
 }
 
 // InsertList
 func (ldb *LevelDB) InsertList(key []byte, d string, pivot []byte, value []byte) int {
-	length, head, tail, counter := ldb.GetListAttr(key)
+	length, head, tail, counter := ldb.getListAttr(key)
 
 	curr := head
 	next := head
@@ -320,7 +319,7 @@ func (ldb *LevelDB) InsertList(key []byte, d string, pivot []byte, value []byte)
 	var i uint32
 	for i = 0; i < length; i++ {
 		curr = next
-		next, prev, v = ldb.GetListElement(key, next)
+		next, prev, v = ldb.getListElement(key, next)
 		if bytes.Equal(pivot, v) {
 			found = true
 			break
@@ -335,33 +334,33 @@ func (ldb *LevelDB) InsertList(key []byte, d string, pivot []byte, value []byte)
 	length++
 
 	if d == "before" {
-		ldb.PutListElement(key, counter, curr, prev, value)
-		ldb.PutListElement(key, curr, next, counter, v)
+		ldb.putListElement(key, counter, curr, prev, value)
+		ldb.putListElement(key, curr, next, counter, v)
 
 		oldPrev := prev
-		_, prev, v = ldb.GetListElement(key, prev)
-		ldb.PutListElement(key, oldPrev, counter, prev, v)
+		_, prev, v = ldb.getListElement(key, prev)
+		ldb.putListElement(key, oldPrev, counter, prev, v)
 
 		if curr == head {
 			head = counter
 		}
 
-		ldb.PutListAttr(key, length, head, tail, counter)
+		ldb.putListAttr(key, length, head, tail, counter)
 	}
 
 	if d == "after" {
-		ldb.PutListElement(key, counter, next, curr, value)
-		ldb.PutListElement(key, curr, counter, prev, v)
+		ldb.putListElement(key, counter, next, curr, value)
+		ldb.putListElement(key, curr, counter, prev, v)
 
 		oldNext := next
-		next, _, v = ldb.GetListElement(key, next)
-		ldb.PutListElement(key, oldNext, next, counter, v)
+		next, _, v = ldb.getListElement(key, next)
+		ldb.putListElement(key, oldNext, next, counter, v)
 
 		if curr == tail {
 			tail = counter
 		}
 
-		ldb.PutListAttr(key, length, head, tail, counter)
+		ldb.putListAttr(key, length, head, tail, counter)
 	}
 
 	return int(length)
@@ -369,7 +368,7 @@ func (ldb *LevelDB) InsertList(key []byte, d string, pivot []byte, value []byte)
 
 // PushListHead
 func (ldb *LevelDB) PushListHead(key []byte, tipe byte, v []byte) uint32 {
-	length, head, tail, counter := ldb.GetListAttr(key)
+	length, head, tail, counter := ldb.getListAttr(key)
 
 	length++
 	counter++
@@ -380,29 +379,29 @@ func (ldb *LevelDB) PushListHead(key []byte, tipe byte, v []byte) uint32 {
 	}
 
 	// insert new element to head
-	ldb.PutListElement(key, counter, head, tail, v)
+	ldb.putListElement(key, counter, head, tail, v)
 
 	// update previous head
 	if length != 1 {
-		headNext, _, headV := ldb.GetListElement(key, head)
-		ldb.PutListElement(key, head, headNext, counter, headV)
+		headNext, _, headV := ldb.getListElement(key, head)
+		ldb.putListElement(key, head, headNext, counter, headV)
 	}
 
 	// update tail
 	if length != 1 {
-		_, tailPrev, tailV := ldb.GetListElement(key, tail)
-		ldb.PutListElement(key, tail, counter, tailPrev, tailV)
+		_, tailPrev, tailV := ldb.getListElement(key, tail)
+		ldb.putListElement(key, tail, counter, tailPrev, tailV)
 	}
 
 	// update attr
-	ldb.PutListAttr(key, length, counter, tail, counter)
+	ldb.putListAttr(key, length, counter, tail, counter)
 
 	return length
 }
 
 // PushListTail
 func (ldb *LevelDB) PushListTail(key []byte, tipe byte, v []byte) uint32 {
-	length, head, tail, counter := ldb.GetListAttr(key)
+	length, head, tail, counter := ldb.getListAttr(key)
 
 	length++
 	counter++
@@ -413,48 +412,48 @@ func (ldb *LevelDB) PushListTail(key []byte, tipe byte, v []byte) uint32 {
 	}
 
 	// insert new element to tail
-	ldb.PutListElement(key, counter, head, tail, v)
+	ldb.putListElement(key, counter, head, tail, v)
 
 	// update head
 	if length != 1 {
-		headNext, _, headV := ldb.GetListElement(key, head)
-		ldb.PutListElement(key, head, headNext, counter, headV)
+		headNext, _, headV := ldb.getListElement(key, head)
+		ldb.putListElement(key, head, headNext, counter, headV)
 	}
 
 	// update previous tail
 	if length != 1 {
-		_, tailPrev, tailV := ldb.GetListElement(key, tail)
-		ldb.PutListElement(key, tail, counter, tailPrev, tailV)
+		_, tailPrev, tailV := ldb.getListElement(key, tail)
+		ldb.putListElement(key, tail, counter, tailPrev, tailV)
 	}
 
 	// update attr
-	ldb.PutListAttr(key, length, head, counter, counter)
+	ldb.putListAttr(key, length, head, counter, counter)
 
 	return length
 }
 
 // PopListHead
 func (ldb *LevelDB) PopListHead(key []byte) []byte {
-	length, head, tail, counter := ldb.GetListAttr(key)
+	length, head, tail, counter := ldb.getListAttr(key)
 
 	if length == 0 {
 		return nil
 	}
 
-	headNext, _, headV := ldb.GetListElement(key, head)
+	headNext, _, headV := ldb.getListElement(key, head)
 	if length == 1 {
 		ldb.delete([][]byte{encodeMetaKey(key), encodeListElementKey(key, head), encodeListElementKey(key, 0)})
 	} else {
-		_, tailPrev, tailV := ldb.GetListElement(key, tail)
-		ldb.PutListElement(key, tail, headNext, tailPrev, tailV)
+		_, tailPrev, tailV := ldb.getListElement(key, tail)
+		ldb.putListElement(key, tail, headNext, tailPrev, tailV)
 
 		if headNext != tail {
-			nextNext, _, nextV := ldb.GetListElement(key, headNext)
-			ldb.PutListElement(key, headNext, nextNext, tail, nextV)
+			nextNext, _, nextV := ldb.getListElement(key, headNext)
+			ldb.putListElement(key, headNext, nextNext, tail, nextV)
 		}
 
 		length--
-		ldb.PutListAttr(key, length, headNext, tail, counter)
+		ldb.putListAttr(key, length, headNext, tail, counter)
 	}
 
 	return headV
@@ -462,26 +461,26 @@ func (ldb *LevelDB) PopListHead(key []byte) []byte {
 
 // PopListTail
 func (ldb *LevelDB) PopListTail(key []byte) []byte {
-	length, head, tail, counter := ldb.GetListAttr(key)
+	length, head, tail, counter := ldb.getListAttr(key)
 
 	if length == 0 {
 		return nil
 	}
 
-	_, tailPrev, tailV := ldb.GetListElement(key, tail)
+	_, tailPrev, tailV := ldb.getListElement(key, tail)
 	if length == 1 {
 		ldb.delete([][]byte{encodeMetaKey(key), encodeListElementKey(key, tail), encodeListElementKey(key, 0)})
 	} else {
-		headNext, _, headV := ldb.GetListElement(key, head)
-		ldb.PutListElement(key, head, headNext, tailPrev, headV)
+		headNext, _, headV := ldb.getListElement(key, head)
+		ldb.putListElement(key, head, headNext, tailPrev, headV)
 
 		if head != tailPrev {
-			_, prevPrev, prevV := ldb.GetListElement(key, tailPrev)
-			ldb.PutListElement(key, tailPrev, head, prevPrev, prevV)
+			_, prevPrev, prevV := ldb.getListElement(key, tailPrev)
+			ldb.putListElement(key, tailPrev, head, prevPrev, prevV)
 		}
 
 		length--
-		ldb.PutListAttr(key, length, head, tailPrev, counter)
+		ldb.putListAttr(key, length, head, tailPrev, counter)
 	}
 
 	return tailV
@@ -489,7 +488,7 @@ func (ldb *LevelDB) PopListTail(key []byte) []byte {
 
 // PopListHead
 func (ldb *LevelDB) GetListLength(key []byte) uint32 {
-	length, _, _, _ := ldb.GetListAttr(key)
+	length, _, _, _ := ldb.getListAttr(key)
 	return length
 }
 

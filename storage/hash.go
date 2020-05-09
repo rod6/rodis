@@ -19,11 +19,10 @@ type Field struct {
 
 // encodeFieldKey encodes hash field key: -Key|Field
 func encodeFieldKey(key []byte, field []byte) []byte {
-	fieldKey := make([]byte, 1 /* '-' */ +len(key)+1 /* '|' */ +len(field))
-	fieldKey[0] = ValuePrefix
-	copy(fieldKey[1:], key)
-	fieldKey[1+len(key)] = Seperator
-	copy(fieldKey[1+len(key)+1:], field)
+	fieldKey := []byte{ValuePrefix}
+	fieldKey = append(fieldKey, key...)
+	fieldKey = append(fieldKey, Seperator)
+	fieldKey = append(fieldKey, field...)
 	return fieldKey
 }
 
@@ -35,29 +34,22 @@ func (ldb *LevelDB) DeleteHash(key []byte) {
 	hashPrefix := encodeFieldKey(key, nil)
 	iter := ldb.db.NewIterator(util.BytesPrefix(hashPrefix), nil)
 	for iter.Next() {
-		key := append([]byte{}, iter.Key()...)
-		keys = append(keys, key)
+		keys = append(keys, append([]byte{}, iter.Key()...))
 	}
 	iter.Release()
 	ldb.delete(keys)
 }
 
-// DeleteHashFields deletes hash fields
-func (ldb *LevelDB) DeleteFields(key []byte, fields [][]byte) {
-	// Delete fields
-	keys := make([][]byte, len(fields))
-	for i, field := range fields {
-		keys[i] = encodeFieldKey(key, field)
+// PutHash write hash data
+func (ldb *LevelDB) PutHash(key []byte, tipe byte, hash map[string][]byte) {
+	batch := new(leveldb.Batch)
+	batch.Put(encodeMetaKey(key), encodeMetadata(tipe))
+	for k, v := range hash {
+		batch.Put(encodeFieldKey(key, []byte(k)), v)
 	}
-	ldb.delete(keys)
-
-	// After delete, remove the hash meta entry if no fields in this hash
-	hashPrefix := encodeFieldKey(key, nil)
-	iter := ldb.db.NewIterator(util.BytesPrefix(hashPrefix), nil)
-	if !iter.Next() {
-		ldb.delete([][]byte{encodeMetaKey(key)}) // No field, delete the hash
+	if err := ldb.db.Write(batch, nil); err != nil {
+		panic(err)
 	}
-	iter.Release()
 }
 
 // GetHash gets hash data
@@ -70,9 +62,9 @@ func (ldb *LevelDB) GetHash(key []byte) map[string][]byte {
 		// Find the seperator '|'
 		sepIndex := strings.IndexByte(string(iter.Key()), '|')
 		// The field name should be the string after '|'
-		key := append([]byte{}, iter.Key()[sepIndex+1:]...)
+		field := append([]byte{}, iter.Key()[sepIndex+1:]...)
 		value := append([]byte{}, iter.Value()...)
-		hash[string(key)] = value
+		hash[string(field)] = value
 	}
 	iter.Release()
 	return hash
@@ -96,7 +88,35 @@ func (ldb *LevelDB) GetHashAsArray(key []byte) []Field {
 	return hash
 }
 
-// GetHashFieldNames gets hash field names
+// DeleteHashFields deletes hash fields
+func (ldb *LevelDB) DeleteFields(key []byte, fields [][]byte) {
+	// Delete fields
+	keys := [][]byte{}
+	for _, field := range fields {
+		keys = append(keys, encodeFieldKey(key, field))
+	}
+	ldb.delete(keys)
+
+	// After delete, remove the hash meta entry if no fields in this hash
+	hashPrefix := encodeFieldKey(key, nil)
+	iter := ldb.db.NewIterator(util.BytesPrefix(hashPrefix), nil)
+	if !iter.Next() {
+		ldb.delete([][]byte{encodeMetaKey(key)}) // No field, delete the hash
+	}
+	iter.Release()
+}
+
+// GetFields get hash fields
+func (ldb *LevelDB) GetFields(key []byte, fields [][]byte) map[string][]byte {
+	hash := make(map[string][]byte)
+	for _, field := range fields {
+		fieldValue := ldb.get(encodeFieldKey(key, field))
+		hash[string(field)] = fieldValue
+	}
+	return hash
+}
+
+// GetFieldNames gets hash field names
 func (ldb *LevelDB) GetFieldNames(key []byte) [][]byte {
 	fields := [][]byte{}
 
@@ -113,16 +133,6 @@ func (ldb *LevelDB) GetFieldNames(key []byte) [][]byte {
 	return fields
 }
 
-// GetHashFieldNames gets hash fields
-func (ldb *LevelDB) GetFields(key []byte, fields [][]byte) map[string][]byte {
-	hash := make(map[string][]byte)
-	for _, field := range fields {
-		fieldValue := ldb.get(encodeFieldKey(key, field))
-		hash[string(field)] = fieldValue
-	}
-	return hash
-}
-
 // GetHashFieldNamesAsArray gets hash fields as array
 func (ldb *LevelDB) GetFieldsAsArray(key []byte, fields [][]byte) []Field {
 	hash := []Field{}
@@ -131,19 +141,4 @@ func (ldb *LevelDB) GetFieldsAsArray(key []byte, fields [][]byte) []Field {
 		hash = append(hash, Field{field, value})
 	}
 	return hash
-}
-
-// PutHash write hash data
-func (ldb *LevelDB) PutHash(key []byte, tipe byte, hash map[string][]byte) {
-	metaKey := encodeMetaKey(key)
-
-	batch := new(leveldb.Batch)
-	batch.Put(metaKey, encodeMetadata(tipe))
-	for k, v := range hash {
-		fieldKey := encodeFieldKey(key, []byte(k))
-		batch.Put(fieldKey, v)
-	}
-	if err := ldb.db.Write(batch, nil); err != nil {
-		panic(err)
-	}
 }

@@ -16,22 +16,22 @@ var (
 
 // encodeExpireKey encodes expire key as -SYSExpire|key
 func encodeExpireKey(key []byte) []byte {
-	expireKey := make([]byte, 1 /* '-' */ +len(ExpireKey)+1 /* '|' */ +len(key))
-	expireKey[0] = ValuePrefix
-	copy(expireKey[1:], ExpireKey)
-	expireKey[1+len(ExpireKey)] = Seperator
-	copy(expireKey[1+len(ExpireKey)+1:], key)
+	expireKey := []byte{ValuePrefix}
+	expireKey = append(expireKey, ExpireKey...)
+	expireKey = append(expireKey, Seperator)
+	expireKey = append(expireKey, key...)
 	return expireKey
 }
 
 // GetExpireAt returns expire as time.Time
 func (ldb *LevelDB) GetExpireAt(key []byte) *time.Time {
 	at := ldb.get(encodeExpireKey(key))
-	var r time.Time
+	// no expire, return nil
 	if len(at) == 0 {
 		return nil
 	}
-	r = time.Unix(int64(binary.BigEndian.Uint64(at)), 0)
+
+	r := time.Unix(int64(binary.BigEndian.Uint64(at)), 0)
 	return &r
 }
 
@@ -46,8 +46,7 @@ func (ldb *LevelDB) SetExpireAt(key []byte, at *time.Time) {
 		return
 	}
 
-	expireKey := encodeExpireKey(key)
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, uint64(at.Unix()))
-	ldb.put(expireKey, buf)
+	ldb.put(encodeExpireKey(key), buf)
 }
